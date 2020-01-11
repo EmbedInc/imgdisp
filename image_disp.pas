@@ -92,7 +92,7 @@ var
   tnam_p: ^string_treename_t;          {scratch pointer to image file name string}
   img: img_conn_t;                     {handle to open image file}
   dev_name:                            {RENDlib device name}
-    %include '/cognivision_links/dsee_libs/string/string_treename.ins.pas';
+    %include '(cog)lib/string_treename.ins.pas';
   rend_dev: rend_dev_id_t;             {RENDlib ID for our graphics device}
   image_width: sys_int_machine_t;      {horizontal size of RENDlib device}
   image_height: sys_int_machine_t;     {vertical size of RENDlib device}
@@ -121,7 +121,7 @@ var
   event: rend_event_t;                 {descriptor for last event encountered}
   imgfile_info: file_info_t;           {file system info about image file}
   fnam:                                {scratch file name}
-    %include '/cognivision_links/dsee_libs/string/string_treename.ins.pas';
+    %include '(cog)lib/string_treename.ins.pas';
   p: string_index_t;                   {string parse index}
   conn: file_conn_t;                   {scratch file connection}
   fit_on: boolean;                     {TRUE if -FIT command line option used}
@@ -139,9 +139,9 @@ var
 
   pick: sys_int_machine_t;             {number of token picked from list}
   opt:                                 {command line option name}
-    %include '/cognivision_links/dsee_libs/string/string_treename.ins.pas';
+    %include '(cog)lib/string_treename.ins.pas';
   parm:                                {command line option parameter}
-    %include '/cognivision_links/dsee_libs/string/string_treename.ins.pas';
+    %include '(cog)lib/string_treename.ins.pas';
   msg_parm:                            {parameter references for messages}
     array[1..max_msg_parms] of sys_parm_msg_t;
   stat: sys_err_t;                     {system-independent error code}
