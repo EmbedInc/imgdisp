@@ -5,4 +5,5 @@ rem
 setlocal
 call godir "(cog)source/imgdisp"
 
+call build_lib
 call build_progs

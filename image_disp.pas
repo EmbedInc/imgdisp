@@ -54,88 +54,27 @@
 *     an infinite loop.
 }
 program "gui" image_disp;
-%include 'sys.ins.pas';
-%include 'util.ins.pas';
-%include 'string.ins.pas';
-%include 'file.ins.pas';
-%include 'img.ins.pas';
-%include 'vect.ins.pas';
-%include 'rend.ins.pas';
-
-const
-  default_rendlib_dev = 'IMAGE_DISP';  {default RENDlib device name}
-  zoom_factor = 1.50;                  {relative incremental zoom factor}
-  max_msg_parms = 2;                   {max parameters we can pass to a message}
-{
-*   Our internal IDs for interactive keys the user can hit.
-}
-  key_pan_k = 1;                       {translate image in X,Y on screen}
-  key_inquire_k = 2;                   {inquire value of image region}
-  key_zoom_in_k = 3;                   {increase image magnification}
-  key_zoom_out_k = 4;                  {decrease image magnification}
-  key_zoom_k = 5;                      {zoom in/out depending on SHIFT}
-  key_next_k = 6;                      {advance to next image in list}
-  key_prev_k = 7;                      {advance to previous image in list}
-
-type
-  anch_t = record                      {info about an anchor point}
-    x, y: real;                        {0.0 to 1.0 relative anchor value}
-    end;
-
-  inqrect_t = record                   {describes bounds of inquire rectangle}
-    xmin, xmax: sys_int_machine_t;     {min/max X coordinates, inclusive}
-    ymin, ymax: sys_int_machine_t;     {min/max Y coordinates, inclusive}
-    end;
+%include 'idisp.ins.pas';
+define idisp;
 
 var
-  img_list: string_list_t;             {file names of images to display}
   tnam_p: ^string_treename_t;          {scratch pointer to image file name string}
-  img: img_conn_t;                     {handle to open image file}
-  dev_name:                            {RENDlib device name}
-    %include '(cog)lib/string_treename.ins.pas';
-  rend_dev: rend_dev_id_t;             {RENDlib ID for our graphics device}
-  image_width: sys_int_machine_t;      {horizontal size of RENDlib device}
-  image_height: sys_int_machine_t;     {vertical size of RENDlib device}
-  aspect: real;                        {aspect ratio of RENDlib device}
-  wait: real;                          {seconds to wait in auto advance mode}
-  clock_wait: sys_clock_t;             {WAIT value in sys clock format}
-  clock_done: sys_clock_t;             {time when done waiting}
-  image_bitmap: rend_bitmap_handle_t;  {handle to RENDlib bitmap}
-  clip_handle: rend_clip_2dim_handle_t; {handle to 2DIM clip rectangle}
-  anch_img: anch_t;                    {anchor point on raw image}
-  anch_dev: anch_t;                    {anchor point on RENDlib device}
   x, y: real;                          {scratch FP coordinates}
   ix, iy: sys_int_machine_t;           {scratch integer coordinates}
-  i: sys_int_machine_t;                {scratch integer an loop counter}
+  ii: sys_int_machine_t;               {scratch integer an loop counter}
   start_x: sys_int_machine_t;          {first image scan line pixel used}
   start_x_zoom: sys_int_machine_t;     {starting X zoom phase}
   start_y: sys_int_machine_t;          {first image scan line used}
-  x_zoom, y_zoom: sys_int_machine_t;   {current X and Y zoom phase}
-  uli_x, uli_y: sys_int_machine_t;     {dev pixel mapped to top left corner of image}
   ul_x, ul_y: sys_int_machine_t;       {upper left corner of rect to draw img in}
   lr_x, lr_y: sys_int_machine_t;       {next pix below and right of draw rectangle}
   dx, dy: sys_int_machine_t;           {size of image rectangle to draw}
-  zoom: sys_int_machine_t;             {integer zoom factor}
   scan_img_p: img_scan1_arg_p_t;       {pointer to scan line from image file}
   scan_dev_p: img_scan1_arg_p_t;       {pointer to scan line for RENDlib device}
   event: rend_event_t;                 {descriptor for last event encountered}
-  imgfile_info: file_info_t;           {file system info about image file}
   fnam:                                {scratch file name}
     %include '(cog)lib/string_treename.ins.pas';
   p: string_index_t;                   {string parse index}
   conn: file_conn_t;                   {scratch file connection}
-  fit_on: boolean;                     {TRUE if -FIT command line option used}
-  bitmap_alloc: boolean;               {TRUE if bitmap pixels already allocated}
-  dith_on: boolean;                    {TRUE if dithering is ON}
-  use_sw: boolean;                     {TRUE if primitive uses SW bitmap}
-  xor_ok: boolean;                     {TRUE if use XOR mode when dragging}
-  pending_resize: boolean;             {TRUE if window resized but not redrawn}
-  pending_redraw: boolean;             {TRUE if window needs redrawing}
-  auto_advance: boolean;               {automatically advance to next image}
-  auto_loop: boolean;                  {loop back to first image after last}
-  img_open: boolean;                   {TRUE if current image file open}
-  backg_clear: boolean;                {TRUE if supposed to clear background}
-  first_img: boolean;                  {TRUE on first image draw}
 
   pick: sys_int_machine_t;             {number of token picked from list}
   opt:                                 {command line option name}
@@ -153,40 +92,6 @@ label
   next_opt, loop_list, err_list, done_opt,  parm_error, done_opts,
   next_image, new_image, size_changed, redraw, done_drawing, event_wait,
   zoom_in, zoom_out, done_event;
-{
-**********************************************************
-*
-*   Subroutine WIND_TO_IMAGE (WX, WY, IX, IY)
-*
-*   Convert the window coordinates WX,WY to the image pixel coordinates
-*   IX, IY.
-}
-procedure wind_to_image (
-  in      wx, wy: sys_int_machine_t;   {input window coordinates}
-  out     ix, iy: sys_int_machine_t);  {output image coordinates}
-  val_param;
-
-begin
-  ix := (wx - uli_x) div zoom;
-  iy := (wy - uli_y) div zoom;
-  end;
-{
-**********************************************************
-*
-*   Subroutine IMAGE_TO_WIND (IX, IY, WX, WY)
-*
-*   Return the window pixel coordinate WX,WY that maps to the top left
-*   corner of the image pixel IX,IY.
-}
-procedure image_to_wind (
-  in      ix, iy: sys_int_machine_t;   {input image coordinates}
-  out     wx, wy: sys_int_machine_t);  {output window coordinates}
-  val_param;
-
-begin
-  wx := uli_x + (ix * zoom);
-  wy := uli_y + (iy * zoom);
-  end;
 {
 **********************************************************
 *
@@ -355,8 +260,8 @@ var
   y1, y2: sys_int_machine_t;           {top/bottom edges of rect in wind coord}
 
 begin
-  image_to_wind (rect.xmin, rect.ymin, x1, y1); {convert rect to window coordinates}
-  image_to_wind (rect.xmax, rect.ymax, x2, y2);
+  xform_image_wind (rect.xmin, rect.ymin, x1, y1); {convert rect to window coordinates}
+  xform_image_wind (rect.xmax, rect.ymax, x2, y2);
 
   x2 := x2 + zoom - 1;                 {go to farthest edge of pixels}
   y2 := y2 + zoom - 1;
@@ -399,17 +304,17 @@ begin
 {
 *   Clip upper left corner to window.
 }
-  image_to_wind (rect.xmin, rect.ymin, x, y);
+  xform_image_wind (rect.xmin, rect.ymin, x, y);
   x := max(0, min(image_width - 1, x));
   y := max(0, min(image_height - 1, y));
-  wind_to_image (x, y, rect.xmin, rect.ymin);
+  xform_wind_image (x, y, rect.xmin, rect.ymin);
 {
 *   Clip lower right corner to window.
 }
-  image_to_wind (rect.xmax, rect.ymax, x, y);
+  xform_image_wind (rect.xmax, rect.ymax, x, y);
   x := max(0, min(image_width - 1, x));
   y := max(0, min(image_height - 1, y));
-  wind_to_image (x, y, rect.xmax, rect.ymax);
+  xform_wind_image (x, y, rect.xmax, rect.ymax);
 {
 *   Clip upper left corner to image.
 }
@@ -452,7 +357,7 @@ label
   wait, event_unexpected;
 
 begin
-  wind_to_image (                      {find image pixel where event was}
+  xform_wind_image (                   {find image pixel where event was}
     event.key.x, event.key.y,          {input window coordinate}
     inqx, inqy);                       {output image coordinate}
   rect.xmin := inqx;                   {init rectangle to original pixel}
@@ -478,7 +383,7 @@ rend_ev_key_k: begin                   {user hit or released a key}
       end;                             {end of key event in pan operation}
 
 rend_ev_pnt_move_k: begin              {the pointer was moved}
-      wind_to_image (                  {find image pixel where pointer is now}
+      xform_wind_image (               {find image pixel where pointer is now}
         event.pnt_move.x, event.pnt_move.y, {input window coordinate}
         ix, iy);                       {output image coordinate}
       rend_set.enter_rend^;            {enter graphics mode}
@@ -1137,12 +1042,12 @@ redraw:
       else begin                       {horizontal zoom in effect, copy pixels}
         ix := start_x;                 {init image scan line index for first pixel}
         x_zoom := start_x_zoom;        {init zoom phase for first pixel}
-        for i := 0 to dx-1 do begin    {once for each device pixel to fill in}
+        for ii := 0 to dx-1 do begin   {once for each device pixel to fill in}
           if x_zoom <= 0 then begin    {exhausted this pixel, move on to next ?}
             ix := ix + 1;              {advance to next source pixel}
             x_zoom := zoom;            {reset zoom phase for new pixel}
             end;
-          scan_dev_p^[i] := scan_img_p^[ix]; {copy this output pixel}
+          scan_dev_p^[ii] := scan_img_p^[ix]; {copy this output pixel}
           x_zoom := x_zoom - 1;        {one less time we can use this input pixel}
           end;                         {back to do next output pixel}
         rend_prim.span_2dimcl^ (       {write this scan line to draw rectangle}
