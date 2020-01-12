@@ -56,6 +56,7 @@ var (idisp)
   x_zoom, y_zoom: sys_int_machine_t;   {current X and Y zoom phase}
   img: img_conn_t;                     {handle to open image file}
   imgfile_info: file_info_t;           {file system info about image file}
+  scan_dev_p: img_scan1_arg_p_t;       {pointer to scan line for RENDlib device}
   bitmap_alloc: boolean;               {TRUE if bitmap pixels already allocated}
   xor_ok: boolean;                     {TRUE if use XOR mode when dragging}
   img_open: boolean;                   {TRUE if current image file open}
@@ -75,6 +76,12 @@ procedure drag_on;                     {start drag operation}
 procedure drag_undraw;                 {undraw dragged object}
   val_param; extern;
 
+procedure draw_resize;                 {update to RENDlib drawing device size}
+  val_param; extern;
+
+procedure draw_setup;                  {one-time drawing setup, into graphics mode}
+  val_param; extern;
+
 procedure event_inquire (              {handle ENQUIRE key event}
   in      evx, evy: sys_int_machine_t); {window coordinate of the enquire event}
   val_param; extern;
@@ -84,12 +91,19 @@ function event_pan (                   {handle user PAN event}
   :boolean;                            {TRUE if redraw required}
   val_param; extern;
 
+procedure event_setup;                 {set up RENDlib events for our use}
+  val_param; extern;
+
 procedure image_close (                {make sure no input image is open}
   out     stat: sys_err_t);
   val_param; extern;
 
 procedure image_open (                 {make sure current image is open}
   out     stat: sys_err_t);
+  val_param; extern;
+
+function image_next                    {advance to next input image}
+  :boolean;                            {TRUE advanced, FALSE no image to advance to}
   val_param; extern;
 
 procedure xform_wind_image (           {transform window to image coordinates}

@@ -75,12 +75,10 @@ var
     %include '(cog)lib/string_treename.ins.pas';
   p: string_index_t;                   {string parse index}
   conn: file_conn_t;                   {scratch file connection}
-  scan_dev_p: img_scan1_arg_p_t;       {pointer to scan line for RENDlib device}
   clock_wait: sys_clock_t;             {WAIT value in sys clock format}
   clock_done: sys_clock_t;             {time when done waiting}
   pending_resize: boolean;             {TRUE if window resized but not redrawn}
   pending_redraw: boolean;             {TRUE if window needs redrawing}
-  use_sw: boolean;                     {TRUE if primitive uses SW bitmap}
 
   pick: sys_int_machine_t;             {number of token picked from list}
   opt:                                 {command line option name}
@@ -90,9 +88,6 @@ var
   msg_parm:                            {parameter references for messages}
     array[1..max_msg_parms] of sys_parm_msg_t;
   stat: sys_err_t;                     {system-independent error code}
-
-  envvar_nopex: string_var16_t :=
-    [str := 'RENDLIB_NO_PEX', len := 14, max := 16];
 
 label
   next_opt, loop_list, err_list, done_opt,  parm_error, done_opts,
@@ -159,6 +154,7 @@ begin
   backg_clear := true;
   wait := 3.0;
   img_open := false;
+  scan_dev_p := nil;
 
   string_vstring (                     {set default RENDlib device specifier string}
     dev_name,
@@ -346,95 +342,9 @@ done_opts:                             {done with all the command line options}
 *   All done processing command line.
 }
   string_list_pos_start (img_list);    {position to before first image file}
-{
-*   Create the environment variable RENDLIB_NO_PEX and set it to TRUE, if
-*   is doesn't already exist.
-}
-  sys_envvar_get (envvar_nopex, parm, stat); {try to read environment variable}
-  if sys_error(stat) then begin        {apparently doesn't exist ?}
-    sys_envvar_set (                   {create environment variable and set value}
-      envvar_nopex,                    {environment variable name}
-      string_v('TRUE'(0)),             {value to set envvar to}
-      stat);
-    sys_error_none (stat);             {reset any error status}
-    end;
 
-  rend_start;                          {init RENDlib}
-  rend_open (                          {open our graphics device}
-    dev_name,                          {name of RENDlib device to use}
-    rend_dev,                          {returned RENDlib device ID}
-    stat);                             {error status}
-  sys_error_abort (stat, 'rend', 'rend_open', nil, 0);
-  rend_set.enter_rend^;                {get into graphics mode}
-
-  rend_set.alloc_bitmap_handle^ (      {create handle to bitmap of RGB values}
-    rend_scope_dev_k,                  {memory belongs to the RENDlib device}
-    image_bitmap);                     {returned bitmap handle}
-  bitmap_alloc := false;               {no bitmap pixels have been allocated}
-
-  rend_get.clip_2dim_handle^ (clip_handle); {create handle to a 2DIM clip window}
-
-  rend_set.iterp_on^ (rend_iterp_red_k, true); {turn on RGB interpolants}
-  rend_set.iterp_on^ (rend_iterp_grn_k, true);
-  rend_set.iterp_on^ (rend_iterp_blu_k, true);
-
-  rend_set.iterp_span_on^ (rend_iterp_red_k, true); {enable for SPAN primitive}
-  rend_set.iterp_span_on^ (rend_iterp_grn_k, true);
-  rend_set.iterp_span_on^ (rend_iterp_blu_k, true);
-
-  rend_set.iterp_span_ofs^ (           {set position in scan line pixels}
-    rend_iterp_red_k, ord(img_col_red_k));
-  rend_set.iterp_span_ofs^ (
-    rend_iterp_grn_k, ord(img_col_grn_k));
-  rend_set.iterp_span_ofs^ (
-    rend_iterp_blu_k, ord(img_col_blu_k));
-
-  rend_set.span_config^ (sizeof(img_pixel1_t)); {offset for one pixel to the right}
-
-  rend_set.event_req_close^ (true);    {enable events we care about}
-  rend_set.event_req_wiped_resize^ (true);
-  rend_set.event_req_wiped_rect^ (true);
-  rend_set.event_req_key_on^ (
-    rend_get.key_sp^ (rend_key_sp_pointer_k, 1),
-    key_pan_k);
-  rend_set.event_req_key_on^ (
-    rend_get.key_sp^ (rend_key_sp_pointer_k, 2),
-    key_inquire_k);
-  rend_set.event_req_key_on^ (
-    rend_get.key_sp^ (rend_key_sp_arrow_up_k, 0),
-    key_zoom_in_k);
-  rend_set.event_req_key_on^ (
-    rend_get.key_sp^ (rend_key_sp_arrow_down_k, 0),
-    key_zoom_out_k);
-  rend_set.event_req_key_on^ (
-    rend_get.key_sp^ (rend_key_sp_pointer_k, 3),
-    key_zoom_k);
-  rend_set.event_req_key_on^ (
-    rend_get.key_sp^ (rend_key_sp_arrow_right_k, 0),
-    key_next_k);
-  rend_set.event_req_key_on^ (
-    rend_get.key_sp^ (rend_key_sp_arrow_left_k, 0),
-    key_prev_k);
-  rend_event_req_stdin_line (true);
-
-  xor_ok := true;                      {init to use XOR mode for dragging}
-
-  drag_on;                             {set up state as if for dragging}
-  rend_get.update_sw_prim^ (           {check for XOR vectors read SW bitmap}
-    rend_prim.vect_2dimcl,             {call table entry for primitive}
-    use_sw);                           {TRUE if XOR vectors use SW bitmap}
-  drag_off;                            {restore state from dragging mode}
-
-  if use_sw then begin                 {XOR vectors access SW bitmap ?}
-    xor_ok := false;                   {init to not use XOR mode for dragging}
-    drag_on;                           {set up state as if for dragging}
-    rend_get.update_sw_prim^ (         {check for dragging vectors write SW bitmap}
-      rend_prim.vect_2dimcl,           {call table entry for primitive}
-      use_sw);                         {TRUE if would do SW emulation anyway}
-    drag_off;                          {restore state from dragging mode}
-    xor_ok := use_sw;                  {use XOR if alternative no better}
-    end;
-
+  draw_setup;                          {set up RENDlib, into graphics mode}
+  event_setup;                         {set up the RENDlib events for our use}
   rend_set.exit_rend^;
 
   scan_img_p := nil;                   {init to no scan line memory allocated}
@@ -444,22 +354,10 @@ done_opts:                             {done with all the command line options}
 *   Back here to advance to next image in list and display it.
 }
 next_image:
-  image_close (stat);                  {make sure no image currently open}
-  sys_error_abort (stat, '', '', nil, 0);
-
-  if img_list.curr >= img_list.n then begin {already at the last image in the list ?}
-    if auto_loop
-      then begin                       {loop back to first image in list}
-        string_list_pos_start (img_list); {reset to before first image}
-        end
-      else begin                       {done with last image, exit program}
-        rend_end;                      {close the graphics}
-        return;                        {exit the program}
-        end
-      ;
-    end;                               {done handling at end of images list}
-
-  string_list_pos_rel (img_list, 1);   {go to next image in image files list}
+  if not image_next then begin         {no next image to advance to ?}
+    rend_end;                          {close the graphics}
+    return;                            {end the program}
+    end;
 {
 *   Back here to display with a new current image.  The new IMG_LIST
 *   position has already been set.
@@ -487,49 +385,7 @@ size_changed:
   image_open (stat);                   {make sure image input file is open}
   sys_error_abort (stat, '', '', nil, 0);
 
-  rend_set.enter_level^ (1);           {get into graphics mode}
-  rend_get.image_size^ (               {find out what size window we have}
-    image_width, image_height, aspect);
-
-  if bitmap_alloc then begin           {need to deallocate previous bitmap pixels ?}
-    rend_set.dealloc_bitmap^ (image_bitmap); {deallocate old pixel memory}
-    rend_mem_dealloc (scan_dev_p, rend_scope_dev_k); {deallocate scan line buffer}
-    end;
-
-  rend_mem_alloc (                     {allocate memory for RENDlib scan line}
-    image_width * sizeof(img_pixel1_t), {amount of memory to allocate}
-    rend_scope_dev_k,                  {memory belongs to the RENDlib device}
-    true,                              {we will need to individually deallcate this}
-    scan_dev_p);                       {returned pointer to the new memory}
-  bitmap_alloc := true;                {a bitmap is currently allocated}
-
-  rend_set.alloc_bitmap^ (             {allocate the RGB pixels for this image}
-    image_bitmap,                      {handle to this bitmap}
-    image_width, image_height,         {size of image in pixels}
-    3,                                 {number of bytes to allocate for each pixel}
-    rend_scope_dev_k);                 {bitmap belongs to RENDlib device}
-
-  rend_set.iterp_bitmap^ (             {connect bitmap to red interpolator}
-    rend_iterp_red_k,                  {interpolant ID to connect bitmap to}
-    image_bitmap,                      {handle to the bitmap}
-    0);                                {byte index into pixel for this interpolant}
-  rend_set.iterp_bitmap^ (             {connect bitmap to green interpolator}
-    rend_iterp_grn_k,
-    image_bitmap,
-    1);
-  rend_set.iterp_bitmap^ (             {connect bitmap to blue interpolator}
-    rend_iterp_blu_k,
-    image_bitmap,
-    2);
-
-  rend_set.update_mode^ (rend_updmode_buffall_k); {may buffer pixel writes}
-
-  rend_set.exit_rend^;
-
-  if fit_on then begin                 {zoom image to fit draw area ?}
-    zoom :=                            {largest zoom that still lets image fit}
-      max(1, min(image_width div img.x_size, image_height div img.y_size));
-    end;
+  draw_resize;                         {update to RENDlib device size}
 {
 *   Back here to redraw.
 }
@@ -797,6 +653,7 @@ key_prev_k: begin                      {back to previous image in list}
 *   Not an event we care about.  All these events are just ignored.
 }
     end;                               {end of event type cases}
+
 done_event:                            {jump here if done processing event}
   goto event_wait;                     {back and wait for another event}
   end.
