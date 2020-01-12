@@ -57,8 +57,10 @@ program "gui" image_disp;
 %include 'idisp.ins.pas';
 define idisp;
 
+const
+  max_msg_parms = 2;                   {max parameters we can pass to a message}
+
 var
-  tnam_p: ^string_treename_t;          {scratch pointer to image file name string}
   x, y: real;                          {scratch FP coordinates}
   ix, iy: sys_int_machine_t;           {scratch integer coordinates}
   ii: sys_int_machine_t;               {scratch integer an loop counter}
@@ -68,13 +70,17 @@ var
   ul_x, ul_y: sys_int_machine_t;       {upper left corner of rect to draw img in}
   lr_x, lr_y: sys_int_machine_t;       {next pix below and right of draw rectangle}
   dx, dy: sys_int_machine_t;           {size of image rectangle to draw}
-  scan_img_p: img_scan1_arg_p_t;       {pointer to scan line from image file}
-  scan_dev_p: img_scan1_arg_p_t;       {pointer to scan line for RENDlib device}
   event: rend_event_t;                 {descriptor for last event encountered}
   fnam:                                {scratch file name}
     %include '(cog)lib/string_treename.ins.pas';
   p: string_index_t;                   {string parse index}
   conn: file_conn_t;                   {scratch file connection}
+  scan_dev_p: img_scan1_arg_p_t;       {pointer to scan line for RENDlib device}
+  clock_wait: sys_clock_t;             {WAIT value in sys clock format}
+  clock_done: sys_clock_t;             {time when done waiting}
+  pending_resize: boolean;             {TRUE if window resized but not redrawn}
+  pending_redraw: boolean;             {TRUE if window needs redrawing}
+  use_sw: boolean;                     {TRUE if primitive uses SW bitmap}
 
   pick: sys_int_machine_t;             {number of token picked from list}
   opt:                                 {command line option name}
@@ -93,465 +99,7 @@ label
   next_image, new_image, size_changed, redraw, done_drawing, event_wait,
   zoom_in, zoom_out, done_event;
 {
-**********************************************************
-*
-*   Subroutine DRAG_ON
-*
-*   Set up state for dragging with the mouse.
-}
-procedure drag_on;
-
-begin
-  rend_get.dith_on^ (dith_on);         {save current dithering state}
-  rend_set.dith_on^ (false);           {temporarily disable dithering}
-  if xor_ok then begin
-    rend_set.iterp_pixfun^ (rend_iterp_red_k, rend_pixfun_xor_k);
-    rend_set.iterp_pixfun^ (rend_iterp_grn_k, rend_pixfun_xor_k);
-    rend_set.iterp_pixfun^ (rend_iterp_blu_k, rend_pixfun_xor_k);
-    rend_set.rgb^ (0.5, 0.5, 0.5);
-    end;
-  rend_set.event_req_pnt^ (true);      {enable pointer motion events}
-  rend_event_req_stdin_line (false);   {disable standard input events}
-  end;
-{
-**********************************************************
-*
-*   Subroutine DRAG_DRAW
-*
-*   Set up state for drawing object in drag mode.
-}
-procedure drag_draw;
-
-begin
-  if not xor_ok then begin
-    rend_set.rgb^ (1.0, 1.0, 0.5);
-    end;
-  end;
-{
-**********************************************************
-*
-*   Subroutine DRAG_UNDRAW
-*
-*   Set up state for undrawing an object previously drawn in drag mode.
-}
-procedure drag_undraw;
-
-begin
-  if not xor_ok then begin
-    rend_set.rgb^ (0.0, 0.0, 0.0);
-    end;
-  end;
-{
-**********************************************************
-*
-*   Subroutine DRAG_OFF
-*
-*   Restore state to normal from dragging with the mouse.
-}
-procedure drag_off;
-
-begin
-  rend_set.iterp_pixfun^ (rend_iterp_red_k, rend_pixfun_insert_k);
-  rend_set.iterp_pixfun^ (rend_iterp_grn_k, rend_pixfun_insert_k);
-  rend_set.iterp_pixfun^ (rend_iterp_blu_k, rend_pixfun_insert_k);
-  rend_set.dith_on^ (dith_on);         {restore old dithering state}
-  rend_set.event_req_pnt^ (false);     {disable pointer motion events}
-  rend_event_req_stdin_line (true);    {re-enable standard input events}
-  end;
-{
-**********************************************************
-*
-*   Function KEY_PAN
-*
-*   Handle event where PAN key was just pressed.  The function returns TRUE
-*   if a redraw is required.
-}
-function key_pan
-  :boolean;                            {TRUE if redraw required}
-
-var
-  ps_x, ps_y: sys_int_machine_t;       {starting coordinates of pan operation}
-  pnt_x, pnt_y: sys_int_machine_t;     {new pointer coordinates}
-
-label
-  wait, event_unexpected;
-
-begin
-  key_pan := false;                    {init to no redraw is required}
-  ps_x := event.key.x;                 {save original pointer coordinates}
-  ps_y := event.key.y;
-  pnt_x := ps_x;                       {init current rubber band end point}
-  pnt_y := ps_y;
-  rend_set.enter_level^ (1);           {enter graphics mode}
-  drag_on;                             {set up state for dragging with pointer}
-  drag_draw;                           {set of for drawing dragged object}
-  rend_set.cpnt_2dim^ (ps_x + 0.5, ps_y + 0.5); {go to start of vector}
-  rend_prim.vect_2dimcl^ (pnt_x + 0.5, pnt_y + 0.5); {draw original rubber band}
-  rend_prim.flush_all^;                {make sure line is drawn now}
-
-wait:                                  {back here to wait for new event}
-  rend_set.enter_level^ (0);           {leave graphics mode before event wait}
-  rend_event_get (event);              {get the next event}
-  case event.ev_type of                {what kind of event is this ?}
-
-rend_ev_key_k: begin                   {user hit or released a key}
-      if event.key.key_p^.id_user <> key_pan_k {this is not our key ?}
-        then goto event_unexpected;
-      anch_img.x :=                    {update anchor point on image}
-        (ps_x - uli_x + 0.5) / (img.x_size * zoom);
-      anch_img.y :=
-        (ps_y - uli_y + 0.5) / (img.y_size * zoom);
-      anch_dev.x :=                    {update anchor point on drawing device}
-        (event.key.x + 0.5) / image_width;
-      anch_dev.y :=
-        (event.key.y + 0.5) / image_height;
-      rend_set.enter_rend^;            {enter graphics mode}
-      if (event.key.x = ps_x) and (event.key.y = ps_y)
-        then begin                     {no net pan was performed}
-          rend_set.cpnt_2dim^ (        {go to start of old rubber band}
-           ps_x + 0.5, ps_y + 0.5);
-          rend_prim.vect_2dimcl^ (pnt_x + 0.5, pnt_y + 0.5); {erase old rubber band}
-          rend_prim.flush_all^;        {make sure line is drawn now}
-          drag_off;                    {restore from dragging state}
-          end
-        else begin                     {the picture was panned}
-          drag_off;                    {restore from dragging state}
-          key_pan := true;             {the picture will need to be redrawn}
-          end
-        ;
-      end;                             {end of key event in pan operation}
-
-rend_ev_pnt_move_k: begin
-      rend_set.enter_rend^;            {enter graphics mode}
-      drag_undraw;                     {set up for undrawing dragged object}
-      rend_set.cpnt_2dim^ (            {go to start of old rubber band}
-        ps_x + 0.5, ps_y + 0.5);
-      rend_prim.vect_2dimcl^ (pnt_x + 0.5, pnt_y + 0.5); {erase old rubber band}
-      drag_draw;                       {set of for drawing dragged object}
-      rend_set.cpnt_2dim^ (            {go to start of new rubber band}
-        ps_x + 0.5, ps_y + 0.5);
-      rend_prim.vect_2dimcl^ (         {redraw rubber band in new position}
-        event.pnt_move.x + 0.5,
-        event.pnt_move.y + 0.5);
-      rend_prim.flush_all^;            {make sure rubber band is drawn now}
-      pnt_x := event.pnt_move.x;       {save rubber band end coordinates}
-      pnt_y := event.pnt_move.y;
-      goto wait;                       {back and wait for more events within PAN}
-      end;
-
-otherwise
-event_unexpected:                      {jump here if got unexpected event}
-    rend_event_push (event);           {put the event back}
-    end;                               {end of event cases within pan operation}
-
-  end;
-{
-**********************************************************
-*
-*   Subroutine DRAW_INQRECT (RECT)
-*
-*   Draw the outine of the inquire rectangle.
-}
-procedure draw_inqrect (
-  in      rect: inqrect_t);            {inquire rectangle bounds}
-
-var
-  x1, x2: sys_int_machine_t;           {left/right edges of rect in wind coord}
-  y1, y2: sys_int_machine_t;           {top/bottom edges of rect in wind coord}
-
-begin
-  xform_image_wind (rect.xmin, rect.ymin, x1, y1); {convert rect to window coordinates}
-  xform_image_wind (rect.xmax, rect.ymax, x2, y2);
-
-  x2 := x2 + zoom - 1;                 {go to farthest edge of pixels}
-  y2 := y2 + zoom - 1;
-
-  x1 := max(0, min(image_width-1, x1)); {clip to actual window area}
-  y1 := max(0, min(image_height-1, y1));
-  x2 := max(0, min(image_width-1, x2));
-  y2 := max(0, min(image_height-1, y2));
-
-  rend_set.cpnt_2dimi^ (x1, y1);       {move to top left corner of rectangle}
-
-  if (x2 = x1) or (y2 = y1) then begin {rectangle is collapsed to a line ?}
-    rend_prim.vect_2dimi^ (x2, y2);
-    return;
-    end;
-
-  rend_prim.vect_2dimi^ (x1, y2 - 1);  {draw left edge of rectangle}
-  rend_set.cpnt_2dimi^ (x1, y2);       {go to start of bottom edge}
-  rend_prim.vect_2dimi^ (x2 - 1, y2);  {draw bottom edge}
-  rend_set.cpnt_2dimi^ (x2, y2);       {go to start of right edge}
-  rend_prim.vect_2dimi^ (x2, y1 + 1);  {draw right edge}
-  rend_set.cpnt_2dimi^ (x2, y1);       {go to start of top edge}
-  rend_prim.vect_2dimi^ (x1 + 1, y1);  {draw top edge}
-  end;
-{
-**********************************************************
-*
-*   Subroutine CLIP_RECT (RECT)
-*
-*   Clip the inquire rectangle to the visible portion of the image in the
-*   current window.  The inquire rectangle is in image coordinates.
-}
-procedure clip_rect (
-  in out  rect: inqrect_t);            {rectangle to adjust if neccessary}
-
-var
-  x, y: sys_int_machine_t;             {scratch coordinates}
-
-begin
-{
-*   Clip upper left corner to window.
-}
-  xform_image_wind (rect.xmin, rect.ymin, x, y);
-  x := max(0, min(image_width - 1, x));
-  y := max(0, min(image_height - 1, y));
-  xform_wind_image (x, y, rect.xmin, rect.ymin);
-{
-*   Clip lower right corner to window.
-}
-  xform_image_wind (rect.xmax, rect.ymax, x, y);
-  x := max(0, min(image_width - 1, x));
-  y := max(0, min(image_height - 1, y));
-  xform_wind_image (x, y, rect.xmax, rect.ymax);
-{
-*   Clip upper left corner to image.
-}
-  rect.xmin := max(0, min(img.x_size - 1, rect.xmin));
-  rect.ymin := max(0, min(img.y_size - 1, rect.ymin));
-{
-*   Clip lower right corner to image.
-}
-  rect.xmax := max(0, min(img.x_size - 1, rect.xmax));
-  rect.ymax := max(0, min(img.y_size - 1, rect.ymax));
-  end;
-{
-**********************************************************
-*
-*   Subroutine KEY_INQUIRE
-*
-*   Handle event where INQUIRE key was just pressed.
-}
-procedure key_inquire;
-
-const
-  max_msg_parms = 8;                   {max parameters we can pass to a message}
-
-var
-  inqx, inqy: sys_int_machine_t;       {pixel that is always within inquire rect}
-  rect: inqrect_t;                     {current inquire rectangle}
-  acc_red, acc_grn, acc_blu, acc_alpha: {average color value accumulators}
-    sys_int_conv32_t;
-  av_red, av_grn, av_blu, av_alpha:    {average 0.0 to 1.0 color values}
-    real;
-  av_ir, av_ig, av_ib, av_ia:          {average 0-255 color values}
-    real;
-  n: sys_int_conv24_t;                 {number of pixels in inquire rectangle}
-  ix, iy: sys_int_machine_t;           {scratch pixel coordinate}
-  dx, dy: sys_int_machine_t;           {size of inquire rectangle}
-  msg_parm:                            {parameter references for messages}
-    array[1..max_msg_parms] of sys_parm_msg_t;
-
-label
-  wait, event_unexpected;
-
-begin
-  xform_wind_image (                   {find image pixel where event was}
-    event.key.x, event.key.y,          {input window coordinate}
-    inqx, inqy);                       {output image coordinate}
-  rect.xmin := inqx;                   {init rectangle to original pixel}
-  rect.xmax := inqx;
-  rect.ymin := inqy;
-  rect.ymax := inqy;
-  clip_rect (rect);                    {clip rectangle to image and window}
-  inqx := rect.xmin;                   {save clipped inquire starting point}
-  inqy := rect.ymin;
-  rend_set.enter_level^ (1);           {enter graphics mode}
-  drag_on;                             {set up state for dragging with pointer}
-  drag_draw;                           {set of for drawing dragged object}
-  draw_inqrect (rect);                 {show the inquire rectangle}
-
-wait:                                  {back here to wait for new event}
-  rend_set.enter_level^ (0);           {leave graphics mode before event wait}
-  rend_event_get (event);              {get the next event}
-  case event.ev_type of                {what kind of event is this ?}
-
-rend_ev_key_k: begin                   {user hit or released a key}
-      if event.key.key_p^.id_user <> key_inquire_k {this is not our key ?}
-        then goto event_unexpected;
-      end;                             {end of key event in pan operation}
-
-rend_ev_pnt_move_k: begin              {the pointer was moved}
-      xform_wind_image (               {find image pixel where pointer is now}
-        event.pnt_move.x, event.pnt_move.y, {input window coordinate}
-        ix, iy);                       {output image coordinate}
-      rend_set.enter_rend^;            {enter graphics mode}
-      drag_undraw;                     {set up for undrawing dragged object}
-      draw_inqrect (rect);             {undraw old inquire rectangle}
-      drag_draw;                       {set up for drawing dragged object}
-      rect.xmin := min(inqx, ix);      {make new inquire rectangle}
-      rect.xmax := max(inqx, ix);
-      rect.ymin := min(inqy, iy);
-      rect.ymax := max(inqy, iy);
-      clip_rect (rect);                {clip new rectangle to image and window}
-      draw_inqrect (rect);             {draw new inquire rectangle}
-      goto wait;                       {back and wait for more events within PAN}
-      end;
-
-otherwise
-event_unexpected:                      {jump here if got unexpected event}
-    rend_event_push (event);           {put the event back}
-    end;                               {end of event cases within pan operation}
-{
-*   The final inquire rectangle is all set.  Now undraw it and actually do the
-*   inquire.
-}
-  rend_set.enter_rend^;                {enter graphics mode}
-  drag_undraw;                         {set up for undrawing rectangle}
-  draw_inqrect (rect);                 {undraw the inquire rectangle}
-  drag_off;                            {all done dragging}
-  rend_set.exit_rend^;                 {don't need to draw anything more}
-
-  acc_red := 0;                        {init average value accumulators}
-  acc_grn := 0;
-  acc_blu := 0;
-  acc_alpha := 0;
-
-  if img.next_y <> 0 then begin        {image file not at start of image ?}
-    img_rewind (img, stat);            {rewind image file to first scan line}
-    rend_error_abort (stat, 'img', 'rewind', nil, 0);
-    end;
-
-  while img.next_y <= rect.ymax do begin {still above or within the rectangle ?}
-    img_read_scan1 (img, scan_img_p^, stat); {read this scan line from image file}
-    rend_error_abort (stat, 'img', 'read_scan_line', nil, 0);
-    if img.next_y <= rect.ymin         {still above the inquire rectangle ?}
-      then next;
-    for ix := rect.xmin to rect.xmax do begin {once for each inq pixel this scan}
-      with scan_img_p^[ix]: p do begin {P is this input scan line pixel}
-        acc_red := acc_red + p.red;    {accumulate values for this pixel}
-        acc_grn := acc_grn + p.grn;
-        acc_blu := acc_blu + p.blu;
-        acc_alpha := acc_alpha + p.alpha;
-        end;                           {done with P abbreviation}
-      end;                             {back and do next pixel accross within rect}
-    end;                               {back and do next scan line down}
-
-  dx := rect.xmax - rect.xmin + 1;     {make size of inquire rectangle}
-  dy := rect.ymax - rect.ymin + 1;
-  n := dx * dy;                        {number of pixels in rectangle}
-
-  av_ir := acc_red / n;                {make average 0 to 255 color values}
-  av_ig := acc_grn / n;
-  av_ib := acc_blu / n;
-  av_ia := acc_alpha / n;
-
-  av_red := av_ir / 255.0;             {make average 0.0 to 1.0 color values}
-  av_grn := av_ig / 255.0;
-  av_blu := av_ib / 255.0;
-  av_alpha := av_ia / 255.0;
-
-  writeln;                             {leave blank line before writing values}
-  if n = 1
-    then begin                         {inquire area is just one pixel}
-      sys_msg_parm_int (msg_parm[1], rect.xmin);
-      sys_msg_parm_int (msg_parm[2], rect.ymin);
-      sys_message_parms ('rend', 'image_disp_pix_coor', msg_parm, 2);
-      end
-    else begin                         {inquire area is a real rectangle}
-      sys_msg_parm_int (msg_parm[1], dx);
-      sys_msg_parm_int (msg_parm[2], dy);
-      sys_msg_parm_int (msg_parm[3], rect.xmin);
-      sys_msg_parm_int (msg_parm[4], rect.ymin);
-      sys_msg_parm_int (msg_parm[5], rect.xmax);
-      sys_msg_parm_int (msg_parm[6], rect.ymax);
-      sys_message_parms ('rend', 'image_disp_rect_coor', msg_parm, 6);
-      end
-    ;
-
-  sys_msg_parm_real (msg_parm[1], av_red);
-  sys_msg_parm_real (msg_parm[2], av_grn);
-  sys_msg_parm_real (msg_parm[3], av_blu);
-  sys_msg_parm_real (msg_parm[4], av_alpha);
-  sys_msg_parm_real (msg_parm[5], av_ir);
-  sys_msg_parm_real (msg_parm[6], av_ig);
-  sys_msg_parm_real (msg_parm[7], av_ib);
-  sys_msg_parm_real (msg_parm[8], av_ia);
-  sys_message_parms ('rend', 'image_disp_values', msg_parm, 8);
-  end;
-{
-**********************************************************
-*
-*   Local subroutine OPEN_IMAGE
-*
-*   Ensure that the current image input file is open.
-}
-procedure open_image;
-
-const
-  max_retry_k = 10;                    {max number of retries allowed to open file}
-  retry_wait_sec_k = 0.5;              {amount of time to wait between retries}
-
-var
-  retry_cnt: sys_int_machine_t;        {number of this try to open file}
-  stat: sys_err_t;
-
-label
-  retry;
-
-begin
-  if img_open then return;             {image file already open}
-  retry_cnt := 1;                      {next try will be first attempt}
-
-retry:                                 {back here to retry opening image file}
-  img_open_read_img (tnam_p^, img, stat); {try to open new image file}
-  if file_not_found(stat) then begin
-    img_open_read_img (tnam_p^, img, stat); {set error status again}
-    retry_cnt := max_retry_k;          {don't allow any more retries}
-    end;
-  if sys_error(stat) and (retry_cnt < max_retry_k) then begin {OK to retry on fail ?}
-    sys_wait (retry_wait_sec_k);       {wait a while before trying again}
-    retry_cnt := retry_cnt + 1;        {update retry count for this new try}
-    goto retry;                        {try to open file again}
-    end;
-  sys_msg_parm_vstr (msg_parm[1], tnam_p^);
-  sys_error_abort (stat, 'img', 'open_read', msg_parm, 1);
-  img_open := true;                    {image file is now open}
-
-  file_info (                          {get info about newly opened image file}
-    img.tnam,                          {name of file inquiring about}
-    [file_iflag_dtm_k],                {we are requesting last modified time stamp}
-    imgfile_info,                      {returned date/time info}
-    stat);
-  sys_error_abort (stat, '', '', nil, 0);
-  end;
-{
-**********************************************************
-*
-*   Local subroutine CLOSE_IMAGE
-*
-*   The the currently open image, if any.
-}
-procedure close_image;
-
-const
-  max_msg_parms = 1;                   {max parameters we can pass to a message}
-
-var
-  msg_parm:                            {parameter references for messages}
-    array[1..max_msg_parms] of sys_parm_msg_t;
-
-begin
-  if img_open then begin               {need to close old image file ?}
-    img_close (img, stat);             {close the currently displayed image file}
-    sys_msg_parm_vstr (msg_parm[1], img.tnam);
-    rend_error_abort (stat, 'img', 'close', msg_parm, 1);
-    img_open := false;                 {indicate image file is now closed}
-    end;
-  end;
-{
-**********************************************************
+********************************************************************************
 *
 *   Local subroutine WAIT_CHANGED
 *
@@ -588,12 +136,17 @@ wait_loop:                             {back here to wait again for file to chan
     end;
   end;
 {
-**********************************************************
+********************************************************************************
 *
 *   Start of main routine.
 }
 begin
   string_cmline_init;                  {init for reading command line}
+{
+*   Init to defaults before processing command line options.
+}
+  string_list_init (img_list, util_top_mem_context); {init list of image files}
+  img_list.deallocable := false;       {won't need to deallocate individual entries}
 
   anch_img.x := 0.5;                   {init to defaults before reading command line}
   anch_img.y := 0.5;
@@ -605,9 +158,7 @@ begin
   auto_loop := false;
   backg_clear := true;
   wait := 3.0;
-
-  string_list_init (img_list, util_top_mem_context); {init list of image files}
-  img_list.deallocable := false;       {won't need to deallocate individual entries}
+  img_open := false;
 
   string_vstring (                     {set default RENDlib device specifier string}
     dev_name,
@@ -867,11 +418,13 @@ done_opts:                             {done with all the command line options}
   rend_event_req_stdin_line (true);
 
   xor_ok := true;                      {init to use XOR mode for dragging}
+
   drag_on;                             {set up state as if for dragging}
   rend_get.update_sw_prim^ (           {check for XOR vectors read SW bitmap}
     rend_prim.vect_2dimcl,             {call table entry for primitive}
     use_sw);                           {TRUE if XOR vectors use SW bitmap}
   drag_off;                            {restore state from dragging mode}
+
   if use_sw then begin                 {XOR vectors access SW bitmap ?}
     xor_ok := false;                   {init to not use XOR mode for dragging}
     drag_on;                           {set up state as if for dragging}
@@ -891,7 +444,8 @@ done_opts:                             {done with all the command line options}
 *   Back here to advance to next image in list and display it.
 }
 next_image:
-  close_image;                         {make sure no image currently open}
+  image_close (stat);                  {make sure no image currently open}
+  sys_error_abort (stat, '', '', nil, 0);
 
   if img_list.curr >= img_list.n then begin {already at the last image in the list ?}
     if auto_loop
@@ -911,10 +465,10 @@ next_image:
 *   position has already been set.
 }
 new_image:
-  close_image;                         {make sure old image, if any, is closed}
-
-  tnam_p := univ_ptr(img_list.str_p);  {make pointer to image file name treename}
-  open_image;                          {open the new image file}
+  image_close (stat);                  {make sure old image, if any, is closed}
+  sys_error_abort (stat, '', '', nil, 0);
+  image_open (stat);                   {open the new image file}
+  sys_error_abort (stat, '', '', nil, 0);
 
   if scan_img_p <> nil then begin      {scan line buffer previously allocated ?}
     rend_mem_dealloc (scan_img_p, rend_scope_dev_k); {deallocate scan line buffer}
@@ -930,7 +484,9 @@ new_image:
 *   exists, but no pixels are currently allocated.
 }
 size_changed:
-  open_image;                          {make sure image file is open}
+  image_open (stat);                   {make sure image input file is open}
+  sys_error_abort (stat, '', '', nil, 0);
+
   rend_set.enter_level^ (1);           {get into graphics mode}
   rend_get.image_size^ (               {find out what size window we have}
     image_width, image_height, aspect);
@@ -978,7 +534,9 @@ size_changed:
 *   Back here to redraw.
 }
 redraw:
-  open_image;                          {make sure image input file is open}
+  image_open (stat);                   {make sure image input file is open}
+  sys_error_abort (stat, '', '', nil, 0);
+
   rend_set.enter_level^ (1);           {get into graphics mode}
   if img.next_y <> 0 then begin        {image file not at start of image ?}
     img_rewind (img, stat);            {rewind image file to first scan line}
@@ -1069,7 +627,8 @@ done_drawing:                          {all done drawing the image}
       auto_advance or                  {automatically going to advance to next img ?}
       auto_loop                        {in infinite loop thru image list ?}
       then begin
-    close_image;                       {close currently displayed image file}
+    image_close (stat);                {close currently displayed image file}
+    sys_error_abort (stat, '', '', nil, 0);
     end;
 {
 *   Back here to wait for another event.
@@ -1114,7 +673,8 @@ rend_ev_none_k: begin
 }
 rend_ev_close_k,                       {draw device was closed}
 rend_ev_close_user_k: begin            {user aksed to close device}
-  close_image;                         {close current image file, if open}
+  image_close (stat);                  {close current image file, if open}
+  sys_error_abort (stat, '', '', nil, 0);
   rend_end;                            {close all graphics}
   return;
   end;
@@ -1129,7 +689,8 @@ rend_ev_stdin_line_k: begin            {a line of text is available from standar
     sys_msg_parm_vstr (msg_parm[1], opt);
     rend_message_bomb ('rend', 'image_disp_cmd_bad', msg_parm, 1);
     end;
-  close_image;                         {close current image file, if open}
+  image_close (stat);                  {close current image file, if open}
+  sys_error_abort (stat, '', '', nil, 0);
   rend_end;                            {close all graphics}
   return;
   end;
@@ -1168,11 +729,11 @@ rend_ev_key_k: begin
   case event.key.key_p^.id_user of     {which one of our keys is this ?}
 
 key_pan_k: begin                       {pan old anchor point to new anchor point}
-      pending_redraw := pending_redraw or key_pan;
+      pending_redraw := pending_redraw or event_pan (event.key.x, event.key.y);
       end;
 
 key_inquire_k: begin                   {get value of pixel or rectangular region}
-      key_inquire;                     {handle inquire in separate routine}
+      event_inquire (event.key.x, event.key.y); {handle the inquiry}
       end;
 
 key_zoom_in_k: begin                   {zoom in one increment}
