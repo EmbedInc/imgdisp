@@ -7,6 +7,7 @@ rem
 setlocal
 call build_pasinit
 
-call src_pas %srcdir% image_disp
-call src_link image_disp image_disp idisp.lib
-call src_exeput image_disp
+set prog=image_disp
+call src_pas %srcdir% %prog%
+call src_link %prog% %prog% idisp.lib
+call src_exeput %prog%

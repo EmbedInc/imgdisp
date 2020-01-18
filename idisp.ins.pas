@@ -27,53 +27,49 @@ type
     x, y: real;                        {0.0 to 1.0 relative anchor value}
     end;
 
+  xform2d_t = record                   {2D coordinate transform}
+    xb: vect_2d_t;                     {X basis vector}
+    yb: vect_2d_t;                     {y basis vector}
+    ofs: vect_2d_t;                    {offset to add after 2x2 multiply}
+    end;
+
 var (idisp)
   {
   *   User parameters.
   }
   img_list: string_list_t;             {file names of images to display}
-  anch_img: anch_t;                    {anchor point on raw image}
-  anch_dev: anch_t;                    {anchor point on RENDlib device}
-  zoom: sys_int_machine_t;             {integer zoom factor}
   wait: real;                          {seconds to wait in auto advance mode}
   dev_name:                            {RENDlib device name}
     %include '(cog)lib/string_treename.ins.pas';
-  fit_on: boolean;                     {use max zoom where image still fits}
   auto_advance: boolean;               {automatically advance to next image}
-  auto_loop: boolean;                  {loop back to first image after last}
-  backg_clear: boolean;                {TRUE if supposed to clear background}
+  list_loop: boolean;                  {loop back to first image after last}
   {
-  *   Internal current state.
+  *   RENDlib device state.
   }
   rend_dev: rend_dev_id_t;             {RENDlib ID for our graphics device}
   image_bitmap: rend_bitmap_handle_t;  {handle to RENDlib bitmap}
   clip_handle: rend_clip_2dim_handle_t; {handle to 2DIM clip rectangle}
-  scan_img_p: img_scan1_arg_p_t;       {pointer to scan line from image file}
-  image_width: sys_int_machine_t;      {horizontal size of RENDlib device}
-  image_height: sys_int_machine_t;     {vertical size of RENDlib device}
-  aspect: real;                        {aspect ratio of RENDlib device}
-  uli_x, uli_y: sys_int_machine_t;     {dev pixel mapped to top left corner of image}
-  x_zoom, y_zoom: sys_int_machine_t;   {current X and Y zoom phase}
-  img: img_conn_t;                     {handle to open image file}
-  imgfile_info: file_info_t;           {file system info about image file}
+  dev_dx, dev_dy: sys_int_machine_t;   {size of drawing device, pixels}
+  dev_aspect: real;                    {aspect ratio of drawing device}
   scan_dev_p: img_scan1_arg_p_t;       {pointer to scan line for RENDlib device}
   bitmap_alloc: boolean;               {TRUE if bitmap pixels already allocated}
-  xor_ok: boolean;                     {TRUE if use XOR mode when dragging}
-  img_open: boolean;                   {TRUE if current image file open}
-  first_img: boolean;                  {TRUE on first image draw}
+  {
+  *   Current source image information.
+  }
+  imgpos: sys_int_machine_t;           {IMG_LIST entry number of open image}
+  img_dx, img_dy: sys_int_machine_t;   {image dimensions, pixels}
+  img_aspect: real;                    {aspect ratio of the whole image}
+  imgpix_p: img_scan1_arg_p_t;         {pointer to source image pixels array}
+  {
+  *   Other state.
+  }
+  clock_wait: sys_clock_t;             {-WAIT value in sys clock format}
+  xpixid: xform2d_t;                   {image to device pixel coor transform}
+  xpixdi: xform2d_t;                   {device to image pixel coor transform}
 {
 *   Routines.
 }
-procedure drag_draw;                   {draw dragged object}
-  val_param; extern;
-
-procedure drag_off;                    {end drag operation}
-  val_param; extern;
-
-procedure drag_on;                     {start drag operation}
-  val_param; extern;
-
-procedure drag_undraw;                 {undraw dragged object}
+procedure draw_image;                  {draw image onto drawing device}
   val_param; extern;
 
 procedure draw_resize;                 {update to RENDlib drawing device size}
@@ -94,24 +90,48 @@ function event_pan (                   {handle user PAN event}
 procedure event_setup;                 {set up RENDlib events for our use}
   val_param; extern;
 
-procedure image_close (                {make sure no input image is open}
+procedure image_load (                 {load the current image into memory}
   out     stat: sys_err_t);
   val_param; extern;
 
-procedure image_open (                 {make sure current image is open}
+function image_pix (                   {get image pixel}
+  in      ix, iy: sys_int_machine_t;   {image pixel coordinate}
+  out     pix: img_pixel1_t)           {pixel value}
+  :boolean;                            {coordinate was within image}
+  val_param; extern;
+
+function image_pix_p (                 {get pointer to image pixel}
+  in      ix, iy: sys_int_machine_t)   {image pixel coordinate}
+  :img_pixel1_p_t;                     {pointer to the pixel, NIL if not exist}
+  val_param; extern;
+
+function image_pos_next                {position to next input image}
+  :boolean;                            {TRUE positioned, FALSE no image to go to}
+  val_param; extern;
+
+function image_pos_prev                {position to previous input image}
+  :boolean;                            {TRUE positioned, FALSE no image to go to}
+  val_param; extern;
+
+function image_sample (                {sample image at a point}
+  in      x, y: real;                  {coor to sample at, units of pixels}
+  out     val: img_pixel1_t)           {returned image value at X,Y}
+  :boolean;                            {within image, returning with actual value}
+  val_param; extern;
+
+procedure image_unload (               {deallocate state for current image}
   out     stat: sys_err_t);
   val_param; extern;
 
-function image_next                    {advance to next input image}
-  :boolean;                            {TRUE advanced, FALSE no image to advance to}
+procedure xform_dpix_ipix (            {transform device to image pixel coordinates}
+  in      devx, devy: real;            {input device pixel coordinate}
+  out     imgx, imgy: real);           {output devide pixel coordinate}
   val_param; extern;
 
-procedure xform_wind_image (           {transform window to image coordinates}
-  in      wx, wy: sys_int_machine_t;   {input window coordinates}
-  out     ix, iy: sys_int_machine_t);  {output image coordinates}
+procedure xform_ipix_dpix (            {transform image to device pixel coordinates}
+  in      imgx, imgy: real;            {input image pixel coordinate}
+  out     devx, devy: real);           {output device pixel coordinate}
   val_param; extern;
 
-procedure xform_image_wind (           {transform image to window coordinates}
-  in      ix, iy: sys_int_machine_t;   {input image coordinates}
-  out     wx, wy: sys_int_machine_t);  {output window coordinates}
+procedure xform_make;                  {create the coordinate transforms}
   val_param; extern;

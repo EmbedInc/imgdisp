@@ -1,0 +1,59 @@
+                            Program IMAGE_DISP
+                             18 January 2020
+
+image_disp <options>
+
+Display an image or sequence of images.  By default, each image is
+maximally scaled and centered in the display area.  Unused display area,
+if any, is set to black.
+
+See the IMAGE_TYPES documentation file for a description of the supported
+image file formats and any associated restrictions.
+
+
+Command Line Options
+
+  <image file name>
+
+    Any command line option that does not start with a dash (-) is assumed
+    to be the name of an image file to display.  Images will be displayed
+    in the sequence they were encountered on the command line.
+
+  -LIST <list file name>
+
+    Supply a list of images to display.  Each line of the list file
+    contains one image file name, except that empty lines and empty file
+    names are ignored.
+
+    The images from the images list file will be added to the total list
+    of images to display.  Images will be displayed in the order of the
+    command line options which caused them to be added to the list.
+    Images within a list file are displayed in top to bottom order.
+
+  -DEV <RENDlib device specifier string>
+
+    Explicitly set the RENDlib device to use for drawing.  The default is
+    to use the IMAGE_DISP logical RENDlib device.  For more information on
+    RENDlib logical devices, see the RENDLIB_DEV documentation file.
+
+  -SCREEN
+
+    Use the whole screen, if possible, to display the image.
+
+  -LOOP
+
+    Causes the first image to be displayed when advancing from the last
+    image.  -LOOP together with -WAIT can be used to set up an unattended
+    slide show.
+
+
+Interactive Controls
+
+  Display next or previous image
+
+    Right arrow displays the next image, and left arrow diplays the
+    previous image.  Without -LOOP, right arrow does nothing at the last
+    image and left arrow does nothing at the first image.  With -LOOP, the
+    images list is considered circular, so right arrow goes to the first
+    image from the last, and left arrow goes to the last image from the
+    first.
