@@ -227,12 +227,14 @@ rend_ev_key_k: begin
   case event.key.key_p^.id_user of     {which one of our keys is this ?}
 
 key_next_k: begin                      {advance to next image in list}
+      discard( rend_event_key_multiple(event) ); {discard multiple of this event}
       if image_pos_next then begin     {went to next image ?}
         goto new_image;
         end;
       end;
 
 key_prev_k: begin                      {back to previous image in list}
+      discard( rend_event_key_multiple(event) ); {discard multiple of this event}
       if image_pos_prev then begin     {went to next image ?}
         goto new_image;
         end;

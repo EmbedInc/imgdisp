@@ -14,13 +14,9 @@ const
 {
 *   Our internal IDs for interactive keys the user can hit.
 }
-  key_pan_k = 1;                       {translate image in X,Y on screen}
-  key_inquire_k = 2;                   {inquire value of image region}
-  key_zoom_in_k = 3;                   {increase image magnification}
-  key_zoom_out_k = 4;                  {decrease image magnification}
-  key_zoom_k = 5;                      {zoom in/out depending on SHIFT}
-  key_next_k = 6;                      {advance to next image in list}
-  key_prev_k = 7;                      {advance to previous image in list}
+  key_unused_k = 0;                    {value for when internal key ID not used}
+  key_next_k = 1;                      {advance to next image in list}
+  key_prev_k = 2;                      {advance to previous image in list}
 
 type
   anch_t = record                      {info about an anchor point}
