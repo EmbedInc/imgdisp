@@ -200,13 +200,6 @@ rend_ev_close_user_k: begin            {user aksed to close device}
 }
 rend_ev_wiped_rect_k: begin
   rend_set.enter_rend^;                {enter graphics mode}
-  rend_set.clip_2dim^ (                {enable clip window and set coordinates}
-    clip_handle,                       {handle to clip window}
-    event.wiped_rect.x,                {left edge}
-    event.wiped_rect.x + event.wiped_rect.dx, {right edge}
-    event.wiped_rect.y,                {top edge}
-    event.wiped_rect.y + event.wiped_rect.dy, {bottom edge}
-    true);                             {draw inside, clip outside}
   goto redraw;
   end;
 {
