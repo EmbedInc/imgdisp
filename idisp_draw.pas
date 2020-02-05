@@ -142,5 +142,7 @@ begin
       scan_dev_p^[0]);                 {first source pixel of span}
     end;                               {back to do next scan line}
 
+  ovl_draw;                            {draw the overlay graphics}
+
   rend_set.exit_rend^;                 {back out of graphics mode}
   end;

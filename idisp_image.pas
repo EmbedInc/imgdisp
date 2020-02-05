@@ -147,9 +147,10 @@ begin
   img_close (img, stat);               {close connection to the image file}
   if sys_error(stat) then goto abort2;
 {
-*   Update our state to the new image dimensions.
+*   Update our state to the new image.
 }
   xform_make;                          {create coordinate transforms}
+ ovl_open;                             {open and set up overlay for this image}
   return;                              {normal return point}
 {
 *   Error exits.  STAT is already set to indicate the error.
@@ -176,6 +177,7 @@ begin
   if imgpix_p = nil then return;       {no image loaded ?}
 
   rend_mem_dealloc (imgpix_p, rend_scope_dev_k); {deallocate pixels array}
+ ovl_close;                            {close overlay data, release resources}
   end;
 {
 ********************************************************************************

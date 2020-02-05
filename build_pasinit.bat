@@ -12,6 +12,7 @@ call src_getfrom file file.ins.pas
 call src_getfrom img img.ins.pas
 call src_getfrom vect vect.ins.pas
 call src_getfrom rend core rend.ins.pas
+call src_getfrom displ displ.ins.pas
 
 call src_get %srcdir% %libname%.ins.pas
 

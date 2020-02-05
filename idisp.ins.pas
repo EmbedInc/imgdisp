@@ -7,6 +7,7 @@
 %include 'img.ins.pas';
 %include 'vect.ins.pas';
 %include 'rend.ins.pas';
+%include 'displ.ins.pas';
 
 const
   default_rendlib_dev = 'IMAGE_DISP';  {default RENDlib device name}
@@ -62,6 +63,7 @@ var (idisp)
   clock_wait: sys_clock_t;             {-WAIT value in sys clock format}
   xpixid: xform2d_t;                   {image to device pixel coor transform}
   xpixdi: xform2d_t;                   {device to image pixel coor transform}
+  ovl_list: displ_t;                   {display list to draw over picture}
 {
 *   Routines.
 }
@@ -117,6 +119,18 @@ function image_sample (                {sample image at a point}
 
 procedure image_unload (               {deallocate state for current image}
   out     stat: sys_err_t);
+  val_param; extern;
+
+procedure ovl_close;                   {close and deallocate curr image overlay}
+  val_param; extern;
+
+procedure ovl_draw;                    {draw all the overlay graphics}
+  val_param; extern;
+
+procedure ovl_init;                    {one-time initialization of OVL_INT module}
+  val_param; extern;
+
+procedure ovl_open;                    {init overlay for current image}
   val_param; extern;
 
 procedure xform_dpix_ipix (            {transform device to image pixel coordinates}

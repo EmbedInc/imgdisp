@@ -152,6 +152,7 @@ done_opts:                             {done with all the command line options}
   draw_setup;                          {set up RENDlib, into graphics mode}
   event_setup;                         {set up the RENDlib events for our use}
   rend_set.exit_rend^;
+  ovl_init;                            {one-time initialization of overlay}
   draw_resize;                         {adjust to the drawing area size}
 
   string_list_pos_abs (img_list, 1);   {position to first image in list}
