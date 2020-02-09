@@ -25,7 +25,7 @@ var
 
 label
   next_opt, loop_list, err_list, done_opt, parm_error, done_opts,
-  new_image, size_changed, redraw, event_wait, done_event;
+  new_image, size_changed, redraw, event_wait, key_up, done_event;
 {
 ********************************************************************************
 *
@@ -146,6 +146,11 @@ parm_error:
 
 done_opts:                             {done with all the command line options}
   clock_wait := sys_clock_from_fp_rel (wait); {make clock value of wait duration}
+
+  string_list_pos_abs (img_list, 1);   {position to first image in list}
+  if img_list.str_p = nil then begin   {no image ?}
+    sys_message_bomb ('image_disp_prog', 'noimage', nil, 0);
+    end;
 {
 *   All done processing command line.
 }
@@ -155,7 +160,6 @@ done_opts:                             {done with all the command line options}
   ovl_init;                            {one-time initialization of overlay}
   draw_resize;                         {adjust to the drawing area size}
 
-  string_list_pos_abs (img_list, 1);   {position to first image in list}
 {
 *   Back here to display with a new current image.  The new IMG_LIST
 *   position has already been set.
@@ -216,11 +220,19 @@ rend_ev_wiped_resize_k: begin
 {
 **************************************
 *
+*   The pointer moved.
+}
+rend_ev_pnt_move_k: begin
+  event_pointer_move (event.pnt_move.x, event.pnt_move.y);
+  end;
+{
+**************************************
+*
 *   A key changed state.
 }
 rend_ev_key_k: begin
-  if not event.key.down then goto done_event; {ignore top level key releases}
-  case event.key.key_p^.id_user of     {which one of our keys is this ?}
+  if not event.key.down then goto key_up;
+  case event.key.key_p^.id_user of     {which key down ?}
 
 key_next_k: begin                      {advance to next image in list}
       discard( rend_event_key_multiple(event) ); {discard multiple of this event}
@@ -236,7 +248,25 @@ key_prev_k: begin                      {back to previous image in list}
         end;
       end;
 
-    end;                               {end of which key cases}
+key_point_k: begin                     {main pointer key down}
+      event_pointer_down (             {handle main pointer down event}
+        event.key.x, event.key.y,      {drawing device coor at time of event}
+        event.key.modk);               {modifiers active at time of event}
+      end;
+
+    end;                               {end of which key down cases}
+  goto done_event;
+
+key_up:                                {the key was released, not pressed}
+  case event.key.key_p^.id_user of     {which key up ?}
+
+key_point_k: begin                     {main pointer key up}
+      event_pointer_up (               {handle main pointer up event}
+        event.key.x, event.key.y,      {drawing device coor at time of event}
+        event.key.modk);               {modifiers active at time of event}
+      end;
+
+    end;                               {end of which key up cases}
   end;                                 {end of key changed state event}
 {
 **************************************

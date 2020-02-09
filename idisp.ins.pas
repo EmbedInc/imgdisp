@@ -18,6 +18,7 @@ const
   key_unused_k = 0;                    {value for when internal key ID not used}
   key_next_k = 1;                      {advance to next image in list}
   key_prev_k = 2;                      {advance to previous image in list}
+  key_point_k = 3;                     {main pointer key}
 
 type
   anch_t = record                      {info about an anchor point}
@@ -78,13 +79,22 @@ procedure draw_resize;                 {update to RENDlib drawing device size}
 procedure draw_setup;                  {one-time drawing setup, into graphics mode}
   val_param; extern;
 
-procedure event_inquire (              {handle ENQUIRE key event}
-  in      evx, evy: sys_int_machine_t); {window coordinate of the enquire event}
+procedure event_pointer_dblclick (     {process main pointer key double click}
+  in      evx, evy: sys_int_machine_t); {draw device coor of event}
   val_param; extern;
 
-function event_pan (                   {handle user PAN event}
-  in      evx, evy: sys_int_machine_t) {window coordinate of the PAN start}
-  :boolean;                            {TRUE if redraw required}
+procedure event_pointer_down (         {handle main pointer key pressed event}
+  in      evx, evy: sys_int_machine_t; {draw device coor of event}
+  in      modk: rend_key_mod_t);       {modifiers active at time of event}
+  val_param; extern;
+
+procedure event_pointer_move (         {handle pointer motion}
+  in      evx, evy: sys_int_machine_t); {new pointer coordinate}
+  val_param; extern;
+
+procedure event_pointer_up (           {handle main pointer key released event}
+  in      evx, evy: sys_int_machine_t; {draw device coor of event}
+  in      modk: rend_key_mod_t);       {modifiers active at time of event}
   val_param; extern;
 
 procedure event_setup;                 {set up RENDlib events for our use}
@@ -137,7 +147,7 @@ procedure ovl_open;                    {init overlay for current image}
 
 procedure xform_dpix_ipix (            {transform device to image pixel coordinates}
   in      devx, devy: real;            {input device pixel coordinate}
-  out     imgx, imgy: real);           {output devide pixel coordinate}
+  out     imgx, imgy: real);           {output image pixel coordinate}
   val_param; extern;
 
 procedure xform_ipix_dpix (            {transform image to device pixel coordinates}
