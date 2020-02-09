@@ -110,26 +110,58 @@ begin
 {
 ********************************************************************************
 *
-*   Subroutine DRAW_IMAGE
+*   Subroutine DRAW_IMAGE (STX, STY, SZX, SZY)
 *
-*   Draw the currently loaded image onto the drawing device.  The drawing device
-*   must be set up.
+*   Draw a rectangle of the currently loaded image onto the drawing device.  The
+*   top left pixel of the rectangle is at STX,STY and the size of the drawing
+*   region is SZX,SZY.  All call parameters are in the drawing device pixel
+*   coordinate space.
+*
+*   It is allowed to specify pixels outside the drawing device area, although
+*   these will not be drawn.  Nothing is done if no drawable pixels result from
+*   the call arguments.
+*
+*   The top left pixel of the drawing device is 0,0, with positive X extending
+*   to the right, and positive Y down.
 }
-procedure draw_image;                  {draw image onto drawing device}
+procedure draw_image (                 {draw rectangle onto drawing device}
+  in      stx, sty: sys_int_machine_t; {top left pixel to draw, drawing device coor}
+  in      szx, szy: sys_int_machine_t); {pixel width and height of rectangle}
   val_param;
 
 var
+  lft, rit, top, bot: sys_int_machine_t; {draw region clipped to draw device}
+  dx, dy: sys_int_machine_t;           {size of clipped draw region}
   ix, iy: sys_int_machine_t;           {drawing device pixel coordinate}
   x, y: real;                          {floating point pixel coordinate}
 
 begin
+  lft := max(0, stx);                  {make actual draw region bounds}
+  rit := min(dev_dx - 1, stx + szx - 1);
+  top := max(0, sty);
+  bot := min(dev_dy - 1, sty + szy - 1);
+  dx := rit - lft + 1;                 {make resulting draw region size}
+  dy := bot - top + 1;
+  if (dx <= 0) or (dy <= 0) then return; {nothing left to draw ?}
+{
+*   LFT, RIT, TOP, and BOT are the limits of the region to draw, and DX and DY
+*   its size.  This region is guaranteed to be wholly on the drawing device, and
+*   there is at least 1 pixel to draw.
+}
   rend_set.enter_rend^;                {into graphics mode}
-  rend_set.min_bits_vis^ (24.0);       {try for full color resolution}
-  rend_set.cpnt_2dimi^ (0, 0);         {set top left corner of spans rectangle}
-  rend_prim.rect_px_2dimcl^ (dev_dx, dev_dy); {set size of spans rectangle}
 
-  for iy := 0 to dev_dy-1 do begin     {down the drawing device scan lines}
-    for ix := 0 to dev_dx-1 do begin   {across this scan line}
+  rend_set.clip_2dim^ (                {set the clip window to this draw area}
+    clip_handle,                       {handle to the clip window}
+    lft, rit + 1.0,                    {left/right edges of clip window}
+    top, bot + 1.0,                    {top/bottom edges of clip window}
+    true);                             {draw inside, clip outside}
+
+  rend_set.min_bits_vis^ (24.0);       {try for full color resolution}
+  rend_set.cpnt_2dimi^ (lft, top);     {set top left corner of spans rectangle}
+  rend_prim.rect_px_2dimcl^ (dx, dy);  {set size of spans rectangle}
+
+  for iy := top to bot do begin        {down the drawing area scan lines}
+    for ix := lft to rit do begin      {across this scan line}
       xform_dpix_ipix (                {find image coordinate}
         ix + 0.5, iy + 0.5,            {input center of this drawing pixel}
         x, y);                         {returned corresponding image coordinate}
@@ -138,8 +170,8 @@ begin
         scan_dev_p^[ix]) );            {returned image value}
       end;                             {back to get next pixel across}
     rend_prim.span_2dimcl^ (           {write this scan to the device}
-      dev_dx,                          {number of pixels in this span}
-      scan_dev_p^[0]);                 {first source pixel of span}
+      dx,                              {number of pixels in this span}
+      scan_dev_p^[lft]);               {first source pixel of span}
     end;                               {back to do next scan line}
 
   ovl_draw;                            {draw the overlay graphics}

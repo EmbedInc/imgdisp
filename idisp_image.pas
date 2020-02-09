@@ -150,7 +150,7 @@ begin
 *   Update our state to the new image.
 }
   xform_make;                          {create coordinate transforms}
- ovl_open;                             {open and set up overlay for this image}
+  ovl_open;                            {open and set up overlay for this image}
   return;                              {normal return point}
 {
 *   Error exits.  STAT is already set to indicate the error.

@@ -9,7 +9,7 @@ setlocal
 set prog=image_disp
 set debug_vs=true
 set debugging=true
-call build_progs
+call build
 if errorlevel 1 goto :eof
 call extpath_var msvc/debugger.exe tnam
-"%tnam%" /DebugExe %prog%.exe -dev debug %1 %2 %3 %4 %5 %6 %7 %8 %9
+"%tnam%" /DebugExe %prog%.exe -dev debug /img/mush %2 %3 %4 %5 %6 %7 %8 %9

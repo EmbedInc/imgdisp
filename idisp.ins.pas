@@ -67,7 +67,9 @@ var (idisp)
 {
 *   Routines.
 }
-procedure draw_image;                  {draw image onto drawing device}
+procedure draw_image (                 {draw rectangle onto drawing device}
+  in      stx, sty: sys_int_machine_t; {top left pixel to draw, drawing device coor}
+  in      szx, szy: sys_int_machine_t); {pixel width and height of rectangle}
   val_param; extern;
 
 procedure draw_resize;                 {update to RENDlib drawing device size}

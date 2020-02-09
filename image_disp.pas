@@ -171,10 +171,10 @@ new_image:
 size_changed:
   draw_resize;                         {update to new RENDlib device size}
 {
-*   Back here to redraw.
+*   Update the whole drawing device.
 }
 redraw:
-  draw_image;                          {draw loaded image onto drawing device}
+  draw_image (0, 0, dev_dx, dev_dy);   {update all drawing device pixels}
 {
 *   Back here to wait for another event.
 }
@@ -201,7 +201,9 @@ rend_ev_close_user_k: begin            {user aksed to close device}
 }
 rend_ev_wiped_rect_k: begin
   rend_set.enter_rend^;                {enter graphics mode}
-  goto redraw;
+  draw_image (                         {redraw the corrupted area}
+    event.wiped_rect.x, event.wiped_rect.y, {top left pixel of redraw area}
+    event.wiped_rect.dx, event.wiped_rect.dy); {size of redraw area}
   end;
 {
 **************************************
