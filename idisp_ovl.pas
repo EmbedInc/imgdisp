@@ -10,7 +10,7 @@ define ovl_draw;
 const
   def_red = 1.0;                       {default color}
   def_grn = 0.4;
-  def_blu = 0.4;
+  def_blu = 0.2;
   def_wid = (2.0 / 1080.0) * 3.0;      {default vector width, 3 pixels at 1080 dim}
 
 var
@@ -38,7 +38,7 @@ begin
 
   rend_get.vect_parms^ (def_vparm);    {make sure all vect parm fields set}
   def_vparm.width := def_wid;
-  def_vparm.poly_level := rend_space_2dcl_k; {vectors to polygons in 2D space}
+  def_vparm.poly_level := rend_space_2d_k; {vectors to polygons in 2D space}
   def_vparm.start_style.style := rend_end_style_circ_k;
   def_vparm.start_style.nsides := 4;
   def_vparm.end_style.style := rend_end_style_circ_k;
@@ -87,7 +87,7 @@ begin
 *
 *   Subroutine OVL_DRAW
 *
-*   Draw all the overlay graphics.
+*   Draw all the overlay graphics.  RENDlib is assumed to be in graphics mode.
 }
 procedure ovl_draw;                    {draw all the overlay graphics}
   val_param;

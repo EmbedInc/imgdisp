@@ -25,12 +25,6 @@ type
     x, y: real;                        {0.0 to 1.0 relative anchor value}
     end;
 
-  xform2d_t = record                   {2D coordinate transform}
-    xb: vect_2d_t;                     {X basis vector}
-    yb: vect_2d_t;                     {y basis vector}
-    ofs: vect_2d_t;                    {offset to add after 2x2 multiply}
-    end;
-
 var (idisp)
   {
   *   User parameters.
@@ -62,8 +56,10 @@ var (idisp)
   *   Other state.
   }
   clock_wait: sys_clock_t;             {-WAIT value in sys clock format}
-  xpixid: xform2d_t;                   {image to device pixel coor transform}
-  xpixdi: xform2d_t;                   {device to image pixel coor transform}
+  xpixid: vect_xf2d_t;                 {image to device pixel coor transform}
+  xpixdi: vect_xf2d_t;                 {device to image pixel coor transform}
+  x2dimg: vect_xf2d_t;                 {2D to image transform}
+  xdev2d: vect_xf2d_t;                 {device pixels to 2D transform}
   ovl_list: displ_t;                   {display list to draw over picture}
 {
 *   Routines.

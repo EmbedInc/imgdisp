@@ -61,7 +61,7 @@ procedure draw_resize;                 {update to RENDlib drawing device size}
   val_param;
 
 begin
-  rend_set.enter_level^ (1);           {get into graphics mode}
+  rend_set.enter_rend^;                {get into graphics mode}
   rend_get.image_size^ (               {find out what size window we have}
     dev_dx, dev_dy, dev_aspect);
 
