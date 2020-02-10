@@ -232,6 +232,11 @@ rend_ev_pnt_move_k: begin
 }
 rend_ev_key_k: begin
   if not event.key.down then goto key_up;
+{
+*********************
+*
+*   Key down events.
+}
   case event.key.key_p^.id_user of     {which key down ?}
 
 key_next_k: begin                      {advance to next image in list}
@@ -254,9 +259,21 @@ key_point_k: begin                     {main pointer key down}
         event.key.modk);               {modifiers active at time of event}
       end;
 
+key_clear_k: begin                     {clear drawing}
+      if event.key.modk = [rend_key_mod_shift_k] then begin {with SHIFT ?}
+        ovl_close;                     {delete all the current overlay drawing state}
+        ovl_open;                      {create new empty overlay state}
+        goto redraw;                   {redraw the whole display}
+        end;
+      end;
+
     end;                               {end of which key down cases}
   goto done_event;
-
+{
+*********************
+*
+*   Key up events.
+}
 key_up:                                {the key was released, not pressed}
   case event.key.key_p^.id_user of     {which key up ?}
 

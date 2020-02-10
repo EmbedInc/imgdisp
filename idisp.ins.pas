@@ -19,6 +19,7 @@ const
   key_next_k = 1;                      {advance to next image in list}
   key_prev_k = 2;                      {advance to previous image in list}
   key_point_k = 3;                     {main pointer key}
+  key_clear_k = 4;                     {clear drawing}
 
 type
   anch_t = record                      {info about an anchor point}

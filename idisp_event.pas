@@ -49,7 +49,11 @@ begin
     rend_get.key_sp^ (rend_key_sp_pointer_k, 1),
     key_point_k);
 
-  pntdown := false;                    {init to main pointer buttton not dow}
+  rend_set.event_req_key_on^ (         {key to clear drawing}
+    rend_get.key_sp^ (rend_key_sp_func_k, 1),
+    key_clear_k);
+
+  pntdown := false;                    {init to main pointer buttton not down}
   end;
 {
 ********************************************************************************

@@ -65,3 +65,7 @@ Interactive Controls
 
     Causes the path of the pointer to be drawn until the button is
     released.
+
+  Shift-F1
+
+    Erase all drawing.
