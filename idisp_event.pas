@@ -95,10 +95,14 @@ procedure event_pointer_move (         {handle pointer motion}
   in      evx, evy: sys_int_machine_t); {new pointer coordinate}
   val_param;
 
+var
+  p2d: vect_2d_t;                      {pointer location in 2D space}
+
 begin
   if not pntdown then return;
 
-  writeln (evx, ',', evy);
+  xform_dpix_2d (evx, evy, p2d);       {transform dev pix coor to 2D space}
+  writeln (p2d.x:6:3, ',', p2d.y:6:3); {TEMP DEBUG, write 2D coor to STD OUT}
   end;
 {
 ********************************************************************************

@@ -4,6 +4,7 @@ module idisp_xform;
 define xform_make;
 define xform_dpix_ipix;
 define xform_ipix_dpix;
+define xform_dpix_2d;
 %include 'idisp.ins.pas';
 {
 ********************************************************************************
@@ -19,6 +20,7 @@ procedure xform_make;                  {create the coordinate transforms}
 
 var
   r: real;                             {scratch floating point}
+  x, y: real;                          {scratch coordinate}
   xf: vect_xf2d_t;                     {scratch 2D coordinate transform}
 
 begin
@@ -60,17 +62,17 @@ begin
   xpixdi.ofs.x := -xpixid.ofs.x * xpixdi.xb.x;
   xpixdi.ofs.y := -xpixid.ofs.y * xpixdi.yb.y;
 {
-*   Set up the 2D space to image transform in X2DIMG.  The +-1.0 square is
-*   centered and maximized within the image.
+*   Set up the 2D space to image pixels transform in X2DIMG.  The +-1.0 square
+*   is centered and maximized within the image.
 }
   if img_aspect >= 1.0
     then begin                         {+-1 square fills image vertically}
-      x2dimg.yb.y := img_dy / 2.0;     {vertical scale}
+      x2dimg.yb.y := -img_dy / 2.0;    {vertical scale}
       x2dimg.xb.x := img_dx / (2.0 * img_aspect); {horizontal scale}
       end
     else begin                         {+-1 square fills image horizontally}
       x2dimg.xb.x := img_dx / 2.0;     {horizontal scale}
-      x2dimg.yb.y := img_dy * img_aspect / 2.0; {vertical scale}
+      x2dimg.yb.y := -img_dy * img_aspect / 2.0; {vertical scale}
       end
     ;
   x2dimg.xb.y := 0.0;                  {no rotation, cross terms zero}
@@ -80,9 +82,27 @@ begin
   x2dimg.ofs.y := img_dy / 2.0;
 {
 *   Combine the 2D to image, and image to device transforms to make the 2D to
-*   device transform.
+*   device transform and its inverse.
 }
-  vect_xf2d_mult (x2dimg, xpixid, xf); {make 2D to device transform in XF}
+  vect_xf2d_mult (x2dimg, xpixid, x2ddev); {save 2D to device transform in X2DDEV}
+  {
+  *   Set the scale factors of the device pixels to 2D transform.  These are
+  *   just the reciprocal of the forward scale factors since there is no
+  *   rotation, and therefore no cross terms.
+  }
+  xdev2d.xb.x := 1.0 / x2ddev.xb.x;    {scale factors for dev pixels to 2D transform}
+  xdev2d.xb.y := 0.0;
+  xdev2d.yb.x := 0.0;
+  xdev2d.yb.y := 1.0 / x2ddev.yb.y;
+  {
+  *   Fill in the offset vector of the device pixels to 2D transform.  The
+  *   center of the device is always 0,0 in the 2D space.
+  }
+  x := dev_dx / 2.0;                   {make device pixels coor to transform}
+  y := dev_dy / 2.0;
+
+  xdev2d.ofs.x := -(x * xdev2d.xb.x + y * xdev2d.yb.x); {set ofs to negative result}
+  xdev2d.ofs.y := -(x * xdev2d.xb.y + y * xdev2d.yb.y);
 {
 *   Set the RENDlib 2D transform.  This converts coordinates in the 2D space to
 *   the canonical 2D space, where the +-1 square is centered and maximized in
@@ -159,4 +179,23 @@ procedure xform_ipix_dpix (            {transform image to device pixel coordina
 begin
   devx := imgx * xpixid.xb.x + imgy * xpixid.yb.x + xpixid.ofs.x;
   devy := imgx * xpixid.xb.y + imgy * xpixid.yb.y + xpixid.ofs.y;
+  end;
+{
+********************************************************************************
+*
+*   Subroutine XFORM_DPIX_2D (DEVX, DEVY, XY2D)
+*
+*   Transform the center of the device pixel DEVX,DEVY to the 2D coordinate
+*   space in D2X,D2Y)
+}
+procedure xform_dpix_2d (              {transform device pixel center to 2D space}
+  in      devx, devy: sys_int_machine_t; {pixel to transform center point of}
+  out     xy2d: vect_2d_t);            {returned 2D space coordinate}
+  val_param;
+
+begin
+  vect_xf2d_xfpnt (                    {apply transform to a point}
+    devx + 0.5, devy + 0.5,            {coordinate to transform}
+    xdev2d,                            {the transform to apply}
+    xy2d);                             {the result}
   end;

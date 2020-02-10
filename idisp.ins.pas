@@ -59,6 +59,7 @@ var (idisp)
   xpixid: vect_xf2d_t;                 {image to device pixel coor transform}
   xpixdi: vect_xf2d_t;                 {device to image pixel coor transform}
   x2dimg: vect_xf2d_t;                 {2D to image transform}
+  x2ddev: vect_xf2d_t;                 {2D to device pixels transform}
   xdev2d: vect_xf2d_t;                 {device pixels to 2D transform}
   ovl_list: displ_t;                   {display list to draw over picture}
 {
@@ -139,6 +140,11 @@ procedure ovl_init;                    {one-time initialization of OVL_INT modul
   val_param; extern;
 
 procedure ovl_open;                    {init overlay for current image}
+  val_param; extern;
+
+procedure xform_dpix_2d (              {transform device pixel center to 2D space}
+  in      devx, devy: sys_int_machine_t; {pixel to transform center point of}
+  out     xy2d: vect_2d_t);            {returned 2D space coordinate}
   val_param; extern;
 
 procedure xform_dpix_ipix (            {transform device to image pixel coordinates}
