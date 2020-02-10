@@ -65,8 +65,19 @@ procedure event_pointer_down (         {handle main pointer key pressed event}
   in      modk: rend_key_mod_t);       {modifiers active at time of event}
   val_param;
 
+var
+  p2d: vect_2d_t;                      {pointer location in 2D space}
+
 begin
+  if pntdown then return;              {key already pressed, this is not new ?}
   pntdown := true;
+
+  xform_dpix_2d (evx, evy, p2d);       {transform dev pix coor to 2D space}
+  ovl_vects_start (p2d.x, p2d.y);      {start vectors chain}
+
+  rend_set.enter_rend^;
+  rend_set.cpnt_2d^ (p2d.x, p2d.y);    {go to vectors chain start}
+  rend_set.exit_rend^;
   end;
 {
 ********************************************************************************
@@ -83,8 +94,10 @@ procedure event_pointer_up (           {handle main pointer key released event}
   val_param;
 
 begin
+  if not pntdown then return;          {key already released, this is not new ?}
   pntdown := false;
-  writeln;
+
+  ovl_vects_end;                       {end the vectors chain}
   end;
 {
 ********************************************************************************
@@ -102,7 +115,11 @@ begin
   if not pntdown then return;
 
   xform_dpix_2d (evx, evy, p2d);       {transform dev pix coor to 2D space}
-  writeln (p2d.x:6:3, ',', p2d.y:6:3); {TEMP DEBUG, write 2D coor to STD OUT}
+  ovl_vects_add (p2d.x, p2d.y);        {add this coordinate to vectors chain}
+
+  rend_set.enter_rend^;
+  rend_prim.vect_2d^ (p2d.x, p2d.y);   {draw the vector to this point}
+  rend_set.exit_rend^;
   end;
 {
 ********************************************************************************
@@ -116,6 +133,10 @@ procedure event_pointer_dblclick (     {process main pointer key double click}
   val_param;
 
 begin
+  if pntdown then begin                {started vectors chain on first click ?}
+    ovl_vects_cancel;                  {cancel it}
+    end;
   pntdown := false;
+
   writeln ('Dbl-click');
   end;

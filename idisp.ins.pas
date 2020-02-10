@@ -142,6 +142,20 @@ procedure ovl_init;                    {one-time initialization of OVL_INT modul
 procedure ovl_open;                    {init overlay for current image}
   val_param; extern;
 
+procedure ovl_vects_add (              {add vector to vectors chain}
+  in      x, y: real);                 {new vectors chain end coordinate}
+  val_param; extern;
+
+procedure ovl_vects_cancel;            {cancel the vectors chain currently building}
+  val_param; extern;
+
+procedure ovl_vects_end;               {end current vectors chain}
+  val_param; extern;
+
+procedure ovl_vects_start (            {start new chain of vectors}
+  in      x, y: real);                 {starting coordinate}
+  val_param; extern;
+
 procedure xform_dpix_2d (              {transform device pixel center to 2D space}
   in      devx, devy: sys_int_machine_t; {pixel to transform center point of}
   out     xy2d: vect_2d_t);            {returned 2D space coordinate}
