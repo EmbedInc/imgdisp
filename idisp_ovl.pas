@@ -41,7 +41,7 @@ begin
   def_color.grn := def_grn;
   def_color.blu := def_blu;
   def_color.opac := 1.0;
-  rend_set.rgba^ (	{set to the default color}
+  rend_set.rgba^ (                     {set to the default color}
     def_color.red, def_color.grn, def_color.blu, def_color.opac);
 
   rend_get.vect_parms^ (def_vparm);    {make sure all vect parm fields set}
@@ -52,7 +52,7 @@ begin
   def_vparm.end_style.style := rend_end_style_circ_k;
   def_vparm.end_style.nsides := 4;
   def_vparm.subpixel := true;
-	rend_set.vect_parms^ (def_vparm);	{set to the default vector drawing parameters}
+  rend_set.vect_parms^ (def_vparm);    {set to the default vector drawing parameters}
 
   rend_get.text_parms^ (def_tparm);    {make sure all text parm fields set}
 
