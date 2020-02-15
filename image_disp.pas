@@ -50,6 +50,10 @@ begin
   bitmap_alloc := false;               {init to RENDlib bitmap not allocated yet}
 
   imgpix_p := nil;                     {init to no image currently loaded}
+  img_tnam.max := size_char(img_tnam.str);
+  img_tnam.len := 0;
+  img_gnam.max := size_char(img_gnam.str);
+  img_gnam.len := 0;
 {
 *   Process command line options.
 }
@@ -194,7 +198,9 @@ event_wait:
 }
 rend_ev_close_k,                       {draw device was closed}
 rend_ev_close_user_k: begin            {user aksed to close device}
+  image_unload (stat);
   rend_end;                            {close all graphics}
+  sys_error_abort (stat, '', '', nil, 0);
   return;
   end;
 {

@@ -90,7 +90,21 @@ begin
 procedure ovl_close;                   {close and deallocate curr image overlay}
   val_param;
 
+var
+  fnam: string_treename_t;             {overlay display list file name}
+  lnam: string_leafname_t;
+  stat: sys_err_t;
+
 begin
+  fnam.max := size_char(fnam.str);     {init local var strings}
+  lnam.max := size_char(lnam.str);
+
+  string_pathname_split (img_tnam, fnam, lnam); {make image directory in FNAM}
+  string_append1 (fnam, '/');          {make generic treename}
+  string_append (fnam, img_gnam);
+  displ_file_write (fnam, ovl_list, stat); {save overlay display list in file}
+  sys_error_abort (stat, '', '', nil, 0);
+
   displ_list_del (ovl_list);
   end;
 {

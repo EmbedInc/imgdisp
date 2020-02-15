@@ -50,6 +50,8 @@ var (idisp)
   *   Current source image information.
   }
   imgpos: sys_int_machine_t;           {IMG_LIST entry number of open image}
+  img_tnam: string_treename_t;         {full pathname of the image file}
+  img_gnam: string_leafname_t;         {generic name of image file}
   img_dx, img_dy: sys_int_machine_t;   {image dimensions, pixels}
   img_aspect: real;                    {aspect ratio of the whole image}
   imgpix_p: img_scan1_arg_p_t;         {pointer to source image pixels array}

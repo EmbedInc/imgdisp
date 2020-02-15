@@ -121,7 +121,8 @@ begin
   img_open_read_img (img_list.str_p^, img, stat); {try to open new image file}
   if sys_error(stat) then return;      {error opening image file ?}
   imgpos := img_list.curr;             {save list entry number of open image}
-
+  string_copy (img.tnam, img_tnam);    {save full pathname of the image file}
+  string_copy (img.gnam, img_gnam);    {save generic name of the image file}
   img_dx := img.x_size;                {save information about this image}
   img_dy := img.y_size;
   img_aspect := img.aspect;
@@ -177,7 +178,7 @@ begin
   if imgpix_p = nil then return;       {no image loaded ?}
 
   rend_mem_dealloc (imgpix_p, rend_scope_dev_k); {deallocate pixels array}
- ovl_close;                            {close overlay data, release resources}
+  ovl_close;                           {close overlay data, release resources}
   end;
 {
 ********************************************************************************
