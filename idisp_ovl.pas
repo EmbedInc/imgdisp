@@ -19,8 +19,8 @@ const
 
 var
   def_color: displ_color_t;            {global default color}
-  def_vparm: rend_vect_parms_t;        {global default vector drawing parameters}
-  def_tparm: rend_text_parms_t;        {global default text drawing parameters}
+  def_vparm: displ_vparm_t;            {global default vector drawing parameters}
+  def_tparm: displ_tparm_t;            {global default text drawing parameters}
   ledit: displ_edit_t;                 {state for editing the display list}
   vedit: displ_edvect_t;               {state for editing the curr vector chain}
 {
@@ -44,17 +44,17 @@ begin
   rend_set.rgba^ (                     {set to the default color}
     def_color.red, def_color.grn, def_color.blu, def_color.opac);
 
-  rend_get.vect_parms^ (def_vparm);    {make sure all vect parm fields set}
-  def_vparm.width := def_wid;
-  def_vparm.poly_level := rend_space_2d_k; {vectors to polygons in 2D space}
-  def_vparm.start_style.style := rend_end_style_circ_k;
-  def_vparm.start_style.nsides := 4;
-  def_vparm.end_style.style := rend_end_style_circ_k;
-  def_vparm.end_style.nsides := 4;
-  def_vparm.subpixel := true;
-  rend_set.vect_parms^ (def_vparm);    {set to the default vector drawing parameters}
+  rend_get.vect_parms^ (def_vparm.vparm); {make sure all vect parm fields set}
+  def_vparm.vparm.width := def_wid;
+  def_vparm.vparm.poly_level := rend_space_2d_k; {vectors to polygons in 2D space}
+  def_vparm.vparm.start_style.style := rend_end_style_circ_k;
+  def_vparm.vparm.start_style.nsides := 4;
+  def_vparm.vparm.end_style.style := rend_end_style_circ_k;
+  def_vparm.vparm.end_style.nsides := 4;
+  def_vparm.vparm.subpixel := true;
+  rend_set.vect_parms^ (def_vparm.vparm); {set to the default vector drawing parameters}
 
-  rend_get.text_parms^ (def_tparm);    {make sure all text parm fields set}
+  rend_get.text_parms^ (def_tparm.tparm); {make sure all text parm fields set}
 
   rend_set.exit_rend^;                 {pop back out of graphics mode}
   end;
