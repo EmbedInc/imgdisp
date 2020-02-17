@@ -102,8 +102,20 @@ begin
   string_pathname_split (img_tnam, fnam, lnam); {make image directory in FNAM}
   string_append1 (fnam, '/');          {make generic treename}
   string_append (fnam, img_gnam);
-  displ_file_write (fnam, ovl_list, stat); {save overlay display list in file}
-  sys_error_abort (stat, '', '', nil, 0);
+  string_appends (fnam, '.displ'(0));  {make full display list file name}
+
+  if displ_list_draws(ovl_list)
+    then begin                         {this list causes drawing, save it}
+      displ_file_write (fnam, ovl_list, stat); {save overlay display list in file}
+      sys_error_abort (stat, '', '', nil, 0);
+      end
+    else begin                         {there is no overlay drawing}
+      if file_exists (fnam) then begin {a display list file exists ?}
+        file_delete_name (fnam, stat); {delete it}
+        sys_error_abort (stat, '', '', nil, 0);
+        end;
+      end
+    ;
 
   displ_list_del (ovl_list);
   end;

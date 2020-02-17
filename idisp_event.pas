@@ -123,6 +123,7 @@ begin
 
   rend_set.enter_rend^;
   rend_prim.vect_2d^ (p2d.x, p2d.y);   {draw the vector to this point}
+  rend_prim.flush_all^;	{force drawing to appear immediately}
   rend_set.exit_rend^;
   end;
 {
