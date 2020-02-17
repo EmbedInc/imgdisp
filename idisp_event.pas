@@ -80,6 +80,11 @@ begin
   ovl_vects_start (p2d.x, p2d.y);      {start vectors chain}
 
   rend_set.enter_rend^;
+  rend_set.clip_2dim^ (                {set clip window to whole device}
+    clip_handle,                       {handle to the clip window}
+    0, dev_dx,                         {X coordinate limits}
+    0, dev_dy,                         {Y coordinate limits}
+    true);                             {draw inside, clip outside}
   rend_set.cpnt_2d^ (p2d.x, p2d.y);    {go to vectors chain start}
   rend_set.exit_rend^;
   end;
@@ -123,7 +128,6 @@ begin
 
   rend_set.enter_rend^;
   rend_prim.vect_2d^ (p2d.x, p2d.y);   {draw the vector to this point}
-  rend_prim.flush_all^;	{force drawing to appear immediately}
   rend_set.exit_rend^;
   end;
 {

@@ -12,4 +12,4 @@ set debugging=true
 call build
 if errorlevel 1 goto :eof
 call extpath_var msvc/debugger.exe tnam
-"%tnam%" /DebugExe %prog%.exe -dev debug /img/mush /img/5008 %2 %3 %4 %5 %6 %7 %8 %9
+"%tnam%" /DebugExe %prog%.exe -dev debug /img/mush /img/5008 %1 %2 %3 %4 %5 %6 %7 %8 %9
