@@ -68,7 +68,13 @@ begin
 procedure ovl_open;                    {init overlay for current image}
   val_param;
 
+var
+  fnam: string_treename_t;             {overlay display list file name}
+  stat: sys_err_t;
+
 begin
+  fnam.max := size_char(fnam.str);     {init local var strings}
+
   displ_list_new (                     {create the display list}
     util_top_mem_context, ovl_list);
   {
@@ -77,6 +83,16 @@ begin
   ovl_list.rend.color_p := addr(def_color);
   ovl_list.rend.vect_parm_p := addr(def_vparm);
   ovl_list.rend.text_parm_p := addr(def_tparm);
+  {
+  *   Read the display list file, if one exists for this image.
+  }
+  string_pathname_join (img_dir, img_gnam, fnam); {make generic image treename}
+  displ_file_read (                    {try to read display list file}
+    fnam,                              {file name, ".displ" suffix implied}
+    ovl_list,                          {display list to add file data to}
+    stat);
+  discard( file_not_found(stat) );     {no display list file is not an error}
+  sys_error_abort (stat, '', '', nil, 0); {complain and abort on hard error}
 
   displ_edit_init (ledit, ovl_list);   {init state for editing the list}
   end;
@@ -92,16 +108,12 @@ procedure ovl_close;                   {close and deallocate curr image overlay}
 
 var
   fnam: string_treename_t;             {overlay display list file name}
-  lnam: string_leafname_t;
   stat: sys_err_t;
 
 begin
   fnam.max := size_char(fnam.str);     {init local var strings}
-  lnam.max := size_char(lnam.str);
 
-  string_pathname_split (img_tnam, fnam, lnam); {make image directory in FNAM}
-  string_append1 (fnam, '/');          {make generic treename}
-  string_append (fnam, img_gnam);
+  string_pathname_join (img_dir, img_gnam, fnam); {make generic image treename}
   string_appends (fnam, '.displ'(0));  {make full display list file name}
 
   if displ_list_draws(ovl_list)

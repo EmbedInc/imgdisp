@@ -52,6 +52,8 @@ begin
   imgpix_p := nil;                     {init to no image currently loaded}
   img_tnam.max := size_char(img_tnam.str);
   img_tnam.len := 0;
+  img_dir.max := size_char(img_dir.str);
+  img_dir.len := 0;
   img_gnam.max := size_char(img_gnam.str);
   img_gnam.len := 0;
 {

@@ -122,6 +122,8 @@ begin
   if sys_error(stat) then return;      {error opening image file ?}
   imgpos := img_list.curr;             {save list entry number of open image}
   string_copy (img.tnam, img_tnam);    {save full pathname of the image file}
+  string_pathname_split (              {save directory containing the image file}
+    img.tnam, img_dir, img_gnam);
   string_copy (img.gnam, img_gnam);    {save generic name of the image file}
   img_dx := img.x_size;                {save information about this image}
   img_dy := img.y_size;
