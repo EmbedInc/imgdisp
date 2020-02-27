@@ -269,8 +269,7 @@ key_point_k: begin                     {main pointer key down}
 
 key_clear_k: begin                     {clear drawing}
       if event.key.modk = [rend_key_mod_shift_k] then begin {with SHIFT ?}
-        ovl_close;                     {delete all the current overlay drawing state}
-        ovl_open;                      {create new empty overlay state}
+        ovl_clear;                     {reset the overlay drawing to none}
         goto redraw;                   {redraw the whole display}
         end;
       end;

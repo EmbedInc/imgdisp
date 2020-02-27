@@ -4,6 +4,7 @@ module idisp_ovl;
 define ovl_init;
 define ovl_open;
 define ovl_close;
+define ovl_clear;
 define ovl_draw;
 define ovl_vects_start;
 define ovl_vects_cancel;
@@ -61,6 +62,28 @@ begin
 {
 ********************************************************************************
 *
+*   Local subroutine OVL_LIST_CREATE
+*
+*   Create and initialize the overlay drawing display list.
+}
+procedure ovl_list_create;
+  val_param; internal;
+
+begin
+  displ_list_new (                     {create the display list}
+    util_top_mem_context, ovl_list);
+  {
+  *   Set the global default drawing parameters for the overlay.
+  }
+  ovl_list.rend.color_p := addr(def_color);
+  ovl_list.rend.vect_parm_p := addr(def_vparm);
+  ovl_list.rend.text_parm_p := addr(def_tparm);
+
+  displ_edit_init (ledit, ovl_list);   {init state for editing the list}
+  end;
+{
+********************************************************************************
+*
 *   Subroutine OVL_OPEN
 *
 *   Initialize the overlay data for the current image.
@@ -75,14 +98,7 @@ var
 begin
   fnam.max := size_char(fnam.str);     {init local var strings}
 
-  displ_list_new (                     {create the display list}
-    util_top_mem_context, ovl_list);
-  {
-  *   Set the global default drawing parameters for the overlay.
-  }
-  ovl_list.rend.color_p := addr(def_color);
-  ovl_list.rend.vect_parm_p := addr(def_vparm);
-  ovl_list.rend.text_parm_p := addr(def_tparm);
+  ovl_list_create;                     {create and init the display list}
   {
   *   Read the display list file, if one exists for this image.
   }
@@ -93,8 +109,6 @@ begin
     stat);
   discard( file_not_found(stat) );     {no display list file is not an error}
   sys_error_abort (stat, '', '', nil, 0); {complain and abort on hard error}
-
-  displ_edit_init (ledit, ovl_list);   {init state for editing the list}
   end;
 {
 ********************************************************************************
@@ -130,6 +144,20 @@ begin
     ;
 
   displ_list_del (ovl_list);
+  end;
+{
+********************************************************************************
+*
+*   Subroutine OVL_CLEAR
+*
+*   Delete all the overlay drawing.
+}
+procedure ovl_clear;                   {delete all overlay drawing}
+  val_param;
+
+begin
+  displ_list_del (ovl_list);           {delete the display list, deallocate resources}
+  ovl_list_create;                     {create a new empty display list}
   end;
 {
 ********************************************************************************

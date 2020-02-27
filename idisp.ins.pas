@@ -134,6 +134,9 @@ procedure image_unload (               {deallocate state for current image}
   out     stat: sys_err_t);
   val_param; extern;
 
+procedure ovl_clear;                   {delete all overlay drawing}
+  val_param; extern;
+
 procedure ovl_close;                   {close and deallocate curr image overlay}
   val_param; extern;
 
