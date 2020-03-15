@@ -1,0 +1,67 @@
+                            Program IMAGE_OVL
+                              15 March 2020
+
+image_ovl <options>
+
+Combine an image and a overlay drawing from a display list (.displ file)
+to a single image.
+
+The overlay drawing file can, for example, result from drawing over an
+image with the IMAGE_DISP program.  IMAGE_DISP does not alter the image it
+displays.  It creates a file with the overlay drawing.  The IMAGE_OVL
+program can be used to permanently add the drawing to an image, or create
+a separate composite image.
+
+The command line options are:
+
+  -IMG <image file name>
+  <image file name>
+
+    Specifies the source image, sets it as the destination image, and
+    implicitly specifies the overlay drawing file.  The overlay drawing
+    file must have the same generic name as the image file, but with the
+    suffix ".displ".
+
+    The first form of this command line option with the -IMG keyword works
+    in all cases.  The second form without -IMG is a shorcut that is only
+    allowed when the image file name does not start with a dash (-).
+
+  -IN <image file name>
+
+    Specifies the source image only.  This overrides the input image file
+    name from any previous command line option.
+
+  -OUT <image file name>
+
+    Specifies the destination image only.  This overrides the output image
+    file name from any previous command line option.
+
+  -OVL <overlay drawing file name>
+
+    Specifies the overlay drawing file only.  This overrides the overlay
+    drawing file name from any previous command line option.
+
+Drawing overlay information is independent of image scaling.  The -1 to 1
+square in X and Y overlay drawing space is always centered and maximized
+within the image.  The output image will have the same dimensions as the
+input image, and the overlay will also be drawn with these dimensions.
+
+It can be desirable to apply an overlay to the highest resolution version
+available of an image.  Scaling that down to lower resolutions (such as
+with the IMAGE_RESIZE or IMAGE_FILTER programs) will result in anti-alised
+overlay drawing.
+
+For example, consider an image originally captured by a camera at 4266 x
+2844 pixels.  This original is then filtered to create a 1620 x 1080
+version for fast direct display on a 1920 x 1080 screen.  This image is
+displayed on a 1920 x 1080 screen with the IMAGE_DISP program, and overlay
+drawing is created.
+
+For best results, use IMAGE_OVL to apply the drawing to the original 4266
+x 2844 image, not the shrunk 1620 x 1080 image.  The overlay drawing was
+captured on the 1920 x 1080 screen, so the resolution of its coordinates
+will always be limited to that.  However, when applied to the 4266 x 2844
+image, the overlay will be scaled and drawn at that resolution.  If the
+composite 4266 x 2844 image is then filtered down to 1620 x 1080, the
+overlay drawing will appear smoother than it the overlay was directly
+applied to the 1620 x 1080 image.
