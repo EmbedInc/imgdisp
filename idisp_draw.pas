@@ -34,13 +34,15 @@ begin
 
   rend_get.clip_2dim_handle^ (clip_handle); {create handle to a 2DIM clip window}
 
-  rend_set.iterp_on^ (rend_iterp_red_k, true); {turn on RGB interpolants}
+  rend_set.iterp_on^ (rend_iterp_red_k, true); {turn on interpolants}
   rend_set.iterp_on^ (rend_iterp_grn_k, true);
   rend_set.iterp_on^ (rend_iterp_blu_k, true);
+  rend_set.iterp_on^ (rend_iterp_alpha_k, true);
 
   rend_set.iterp_span_on^ (rend_iterp_red_k, true); {enable for SPAN primitive}
   rend_set.iterp_span_on^ (rend_iterp_grn_k, true);
   rend_set.iterp_span_on^ (rend_iterp_blu_k, true);
+  rend_set.iterp_span_on^ (rend_iterp_alpha_k, true);
 
   rend_set.iterp_span_ofs^ (           {set offsets of components within pixel}
     rend_iterp_red_k, offset(img_pixel1_t.red));
@@ -48,7 +50,13 @@ begin
     rend_iterp_grn_k, offset(img_pixel1_t.grn));
   rend_set.iterp_span_ofs^ (
     rend_iterp_blu_k, offset(img_pixel1_t.blu));
+  rend_set.iterp_span_ofs^ (
+    rend_iterp_alpha_k, offset(img_pixel1_t.alpha));
+
   rend_set.span_config^ (sizeof(img_pixel1_t)); {offset for one pixel to the right}
+
+  rend_set.alpha_func^ (rend_afunc_over_k); {set transparency function}
+  rend_set.alpha_on^ (true);           {leave alpha blending off for now}
   end;
 {
 ********************************************************************************
@@ -78,7 +86,7 @@ begin
   rend_set.alloc_bitmap^ (             {allocate the RGB pixels for this image}
     image_bitmap,                      {handle to this bitmap}
     dev_dx, dev_dy,                    {size of image in pixels}
-    3,                                 {number of bytes to allocate for each pixel}
+    4,                                 {number of bytes to allocate for each pixel}
     rend_scope_dev_k);                 {bitmap belongs to RENDlib device}
   bitmap_alloc := true;                {a bitmap is currently allocated}
 
@@ -94,6 +102,10 @@ begin
     rend_iterp_blu_k,
     image_bitmap,
     2);
+  rend_set.iterp_bitmap^ (             {connect bitmap to alpha interpolant}
+    rend_iterp_alpha_k,
+    image_bitmap,
+    3);
 
   rend_set.update_mode^ (rend_updmode_buffall_k); {may buffer pixel writes}
 
