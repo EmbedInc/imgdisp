@@ -177,6 +177,21 @@ done_opts:                             {done with all the command line options}
   rend_set.iterp_on^ (rend_iterp_blu_k, true);
   rend_set.iterp_on^ (rend_iterp_alpha_k, true);
 
+  rend_set.iterp_span_on^ (rend_iterp_red_k, true); {enable for SPAN primitive}
+  rend_set.iterp_span_on^ (rend_iterp_grn_k, true);
+  rend_set.iterp_span_on^ (rend_iterp_blu_k, true);
+  rend_set.iterp_span_on^ (rend_iterp_alpha_k, true);
+
+  rend_set.iterp_span_ofs^ (           {set offsets of components within pixel}
+    rend_iterp_red_k, offset(img_pixel1_t.red));
+  rend_set.iterp_span_ofs^ (
+    rend_iterp_grn_k, offset(img_pixel1_t.grn));
+  rend_set.iterp_span_ofs^ (
+    rend_iterp_blu_k, offset(img_pixel1_t.blu));
+  rend_set.iterp_span_ofs^ (
+    rend_iterp_alpha_k, offset(img_pixel1_t.alpha));
+  rend_set.span_config^ (sizeof(img_pixel1_t)); {offset for one pixel to the right}
+
   rend_set.iterp_bitmap^ (             {connect bitmap to red interpolant}
     rend_iterp_red_k,                  {interpolant ID to connect bitmap to}
     bitmaph,                           {handle to the bitmap}
@@ -194,10 +209,8 @@ done_opts:                             {done with all the command line options}
     bitmaph,
     offset(img_pixel1_t.alpha));
 
-(*
-  rend_set.alpha_on^ (true);           {enable alpha blending}
   rend_set.alpha_func^ (rend_afunc_over_k); {init alpha function}
-*)
+  rend_set.alpha_on^ (true);           {enable alpha blending}
   rend_set.rgba^ (0.0, 0.0, 0.0, 1.0); {init color, opaque black}
 
   rend_get.clip_2dim_handle^ (clip_handle); {create handle to a 2DIM clip window}
