@@ -56,7 +56,7 @@ begin
   rend_set.span_config^ (sizeof(img_pixel1_t)); {offset for one pixel to the right}
 
   rend_set.alpha_func^ (rend_afunc_over_k); {set transparency function}
-  rend_set.alpha_on^ (true);           {leave alpha blending off for now}
+  rend_set.alpha_on^ (false);          {leave alpha blending off for now}
   end;
 {
 ********************************************************************************
@@ -169,6 +169,7 @@ begin
     true);                             {draw inside, clip outside}
 
   rend_set.min_bits_vis^ (24.0);       {try for full color resolution}
+  rend_set.alpha_on^ (false);          {image and background around it are opaque}
   rend_set.cpnt_2dimi^ (lft, top);     {set top left corner of spans rectangle}
   rend_prim.rect_px_2dimcl^ (dx, dy);  {set size of spans rectangle}
 
@@ -186,6 +187,8 @@ begin
       scan_dev_p^[lft]);               {first source pixel of span}
     end;                               {back to do next scan line}
 
+  rend_set.alpha_func^ (rend_afunc_over_k); {set transparency function}
+  rend_set.alpha_on^ (true);           {overlays are drawn with transparency}
   ovl_draw;                            {draw the overlay graphics}
 
   rend_set.exit_rend^;                 {back out of graphics mode}
