@@ -4,7 +4,7 @@ module idisp_draw;
 define draw_setup;
 define draw_resize;
 define draw_image;
-%include 'idisp.ins.pas';
+%include 'image_disp.ins.pas';
 {
 ********************************************************************************
 *

@@ -10,7 +10,7 @@ define ovl_vects_start;
 define ovl_vects_cancel;
 define ovl_vects_add;
 define ovl_vects_end;
-%include 'idisp.ins.pas';
+%include 'image_disp.ins.pas';
 
 const
   def_red = 1.0;                       {default color}

@@ -5,7 +5,7 @@ define xform_make;
 define xform_dpix_ipix;
 define xform_ipix_dpix;
 define xform_dpix_2d;
-%include 'idisp.ins.pas';
+%include 'image_disp.ins.pas';
 {
 ********************************************************************************
 *

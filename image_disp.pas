@@ -1,7 +1,7 @@
 {   Program IMAGE_DISP [<options>]
 }
 program "gui" image_disp;
-%include 'idisp.ins.pas';
+%include 'image_disp.ins.pas';
 define idisp;
 
 const

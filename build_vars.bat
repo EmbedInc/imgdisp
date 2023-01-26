@@ -5,8 +5,5 @@ rem
 set srcdir=imgdisp
 set buildname=
 call treename_var "(cog)source/imgdisp" sourcedir
-set libname=idisp
+set libname=
 set fwname=
-call treename_var "(cog)src/%srcdir%/debug_%fwname%.bat" tnam
-make_debug "%tnam%"
-call "%tnam%"

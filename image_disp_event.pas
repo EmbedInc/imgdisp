@@ -6,7 +6,7 @@ define event_pointer_down;
 define event_pointer_up;
 define event_pointer_move;
 define event_point_dblclick;
-%include 'idisp.ins.pas';
+%include 'image_disp.ins.pas';
 
 var
   pntdown: boolean;                    {main pointer button is down}

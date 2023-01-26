@@ -8,7 +8,7 @@ define image_load;
 define image_unload;
 define image_pix;
 define image_sample;
-%include 'idisp.ins.pas';
+%include 'image_disp.ins.pas';
 {
 ********************************************************************************
 *

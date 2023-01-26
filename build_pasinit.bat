@@ -14,7 +14,5 @@ call src_getfrom vect vect.ins.pas
 call src_getfrom rend core rend.ins.pas
 call src_getfrom displ displ.ins.pas
 
-call src_get %srcdir% %libname%.ins.pas
-
 make_debug debug_switches.ins.pas
 call src_builddate "%srcdir%"
